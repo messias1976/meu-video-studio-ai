@@ -2,8 +2,20 @@ const PROJECTS_KEY = 'meu-video-studio-ai:projects:v2'
 const PX_PER_SECOND = 70
 const TIMELINE_LEFT = 120
 
-type Clip = { start?: number; duration?: number; track?: string }
+type Clip = { id?: string; start?: number; duration?: number; track?: string; lane?: number }
 type Project = { id: string; clips?: Clip[]; playhead?: number }
+
+type DragState = {
+  clipId: string
+  startX: number
+  originalStart: number
+  originalLane: number
+  lane: number
+  start: number
+  active: boolean
+}
+
+let dragState: DragState | null = null
 
 function readProjects(): Project[] {
   try {
@@ -41,9 +53,184 @@ function injectTimelineCss() {
     .timeline-track{min-width:0!important}
     .track-lane{min-width:0!important}
     .time-ruler{min-width:0!important}
-    .timeline-scroll{overflow-x:auto!important;overflow-y:auto!important}
+    .timeline-scroll{overflow-x:auto!important;overflow-y:auto!important;overscroll-behavior:contain}
+    .timeline-clip{touch-action:none;user-select:none}
+    .timeline-clip.vfs-dragging{opacity:.82;z-index:50;cursor:grabbing}
   `
   document.head.appendChild(style)
+}
+
+function clipElements() {
+  return Array.from(document.querySelectorAll<HTMLElement>('.timeline-clip'))
+}
+
+function syncClipData(project: Project) {
+  const tracks = Array.from(document.querySelectorAll<HTMLElement>('.timeline-track'))
+  tracks.forEach((track, trackIndex) => {
+    const isAudio = track.querySelector('.track-label')?.textContent?.toLowerCase().includes('áudio')
+    const lane = isAudio ? 0 : trackIndex
+    const clips = (project.clips || []).filter(clip => clip.track === (isAudio ? 'audio' : 'video') && (isAudio || (clip.lane ?? 0) === lane))
+    track.querySelectorAll<HTMLElement>('.timeline-clip').forEach((element, index) => {
+      const clip = clips[index]
+      if (!clip?.id) return
+      element.dataset.vfsClipId = clip.id
+      element.dataset.vfsTrack = clip.track || 'video'
+      element.dataset.vfsLane = String(clip.lane ?? 0)
+    })
+  })
+}
+
+function updateDraggedDom(project: Project) {
+  if (!dragState) return
+  const clipEl = document.querySelector<HTMLElement>(`.timeline-clip[data-vfs-clip-id="${CSS.escape(dragState.clipId)}"]`)
+  const canvas = document.querySelector<HTMLElement>('.timeline-canvas')
+  const lanes = Array.from(document.querySelectorAll<HTMLElement>('.timeline-track'))
+    .filter(track => !(track.querySelector('.track-label')?.textContent || '').toLowerCase().includes('áudio'))
+    .map(track => track.querySelector<HTMLElement>('.track-lane'))
+    .filter((lane): lane is HTMLElement => Boolean(lane))
+
+  if (!clipEl || !canvas || !lanes.length) return
+
+  const scroll = canvas.parentElement
+  const rect = canvas.getBoundingClientRect()
+  const scrollLeft = scroll?.scrollLeft ?? 0
+  const rawStart = (dragState.startX - rect.left + scrollLeft - TIMELINE_LEFT) / PX_PER_SECOND
+  const nextStart = Math.max(0, Number(rawStart.toFixed(2)))
+
+  const pointerY = dragState.start
+  const centerX = dragState.startX
+  void centerX
+  dragState.start = nextStart
+
+  const moveY = (window as unknown as { __vfsPointerY?: number }).__vfsPointerY
+  const y = Number.isFinite(moveY) ? moveY : 0
+  const targetLaneIndex = lanes.reduce((best, lane, index) => {
+    const r = lane.getBoundingClientRect()
+    const center = r.top + r.height / 2
+    return Math.abs(y - center) < Math.abs(y - (lanes[best]?.getBoundingClientRect().top + lanes[best]?.getBoundingClientRect().height / 2 || 0)) ? index : best
+  }, Math.max(0, Math.min(2, dragState.originalLane)))
+
+  dragState.lane = Math.max(0, Math.min(2, targetLaneIndex))
+  clipEl.style.left = `${dragState.start * PX_PER_SECOND}px`
+  const targetLane = lanes[dragState.lane]
+  if (targetLane && clipEl.parentElement !== targetLane) targetLane.appendChild(clipEl)
+  clipEl.dataset.vfsLane = String(dragState.lane)
+  clipEl.classList.add('vfs-dragging')
+}
+
+function persistDraggedClip() {
+  if (!dragState) return
+  const project = currentProject()
+  if (!project) return
+  const nextProjects = readProjects()
+  const saved = nextProjects.find(item => item.id === project.id)
+  if (!saved) return
+  saved.clips = (saved.clips || []).map(clip => clip.id === dragState?.clipId
+    ? { ...clip, start: Number(Math.max(0, dragState.start).toFixed(2)), lane: Math.max(0, Math.min(2, dragState.lane)) }
+    : clip)
+  saved.updatedAt = new Date().toISOString()
+  localStorage.setItem(PROJECTS_KEY, JSON.stringify(nextProjects))
+}
+
+function beginDrag(event: PointerEvent, element: HTMLElement) {
+  if (event.button !== 0 || (event.target as HTMLElement).closest('button')) return
+  const project = currentProject()
+  const clipId = element.dataset.vfsClipId
+  if (!project || !clipId) return
+  const clip = (project.clips || []).find(item => item.id === clipId)
+  if (!clip || clip.track !== 'video') return
+
+  event.preventDefault()
+  event.stopPropagation()
+  event.stopImmediatePropagation()
+
+  dragState = {
+    clipId,
+    startX: event.clientX,
+    originalStart: Number(clip.start) || 0,
+    originalLane: Math.max(0, Math.min(2, Number(clip.lane) || 0)),
+    lane: Math.max(0, Math.min(2, Number(clip.lane) || 0)),
+    start: Number(clip.start) || 0,
+    active: true,
+  }
+
+  ;(window as unknown as { __vfsPointerY?: number }).__vfsPointerY = event.clientY
+  element.setPointerCapture?.(event.pointerId)
+  element.classList.add('vfs-dragging')
+}
+
+function moveDrag(event: PointerEvent) {
+  if (!dragState?.active) return
+  event.preventDefault()
+  event.stopPropagation()
+  event.stopImmediatePropagation()
+  ;(window as unknown as { __vfsPointerY?: number }).__vfsPointerY = event.clientY
+
+  const project = currentProject()
+  const canvas = document.querySelector<HTMLElement>('.timeline-canvas')
+  if (!project || !canvas) return
+
+  const scroll = canvas.parentElement
+  const rect = canvas.getBoundingClientRect()
+  const scrollLeft = scroll?.scrollLeft ?? 0
+  const nextStart = Math.max(0, Number(((event.clientX - rect.left + scrollLeft - TIMELINE_LEFT) / PX_PER_SECOND).toFixed(2)))
+  dragState.start = nextStart
+
+  const lanes = Array.from(document.querySelectorAll<HTMLElement>('.timeline-track'))
+    .filter(track => !(track.querySelector('.track-label')?.textContent || '').toLowerCase().includes('áudio'))
+    .map(track => track.querySelector<HTMLElement>('.track-lane'))
+    .filter((lane): lane is HTMLElement => Boolean(lane))
+
+  if (lanes.length) {
+    let bestLane = dragState.originalLane
+    let bestDistance = Number.POSITIVE_INFINITY
+    lanes.forEach((lane, index) => {
+      const r = lane.getBoundingClientRect()
+      const distance = Math.abs(event.clientY - (r.top + r.height / 2))
+      if (distance < bestDistance) {
+        bestDistance = distance
+        bestLane = index
+      }
+    })
+    dragState.lane = Math.max(0, Math.min(2, bestLane))
+
+    const clipEl = document.querySelector<HTMLElement>(`.timeline-clip[data-vfs-clip-id="${CSS.escape(dragState.clipId)}"]`)
+    if (clipEl) {
+      clipEl.style.left = `${dragState.start * PX_PER_SECOND}px`
+      clipEl.dataset.vfsLane = String(dragState.lane)
+      const targetLane = lanes[dragState.lane]
+      if (targetLane && clipEl.parentElement !== targetLane) targetLane.appendChild(clipEl)
+      clipEl.classList.add('vfs-dragging')
+    }
+  }
+}
+
+function endDrag(event?: PointerEvent) {
+  if (!dragState?.active) return
+  event?.preventDefault()
+  event?.stopPropagation()
+  event?.stopImmediatePropagation()
+  const clipEl = document.querySelector<HTMLElement>(`.timeline-clip[data-vfs-clip-id="${CSS.escape(dragState.clipId)}"]`)
+  if (clipEl) clipEl.classList.remove('vfs-dragging')
+  persistDraggedClip()
+  dragState = null
+  delete (window as unknown as { __vfsPointerY?: number }).__vfsPointerY
+  window.location.reload()
+}
+
+function bindDragHandlers() {
+  if (document.documentElement.dataset.vfsDragBound === '1') return
+  document.documentElement.dataset.vfsDragBound = '1'
+
+  document.addEventListener('pointerdown', event => {
+    const element = (event.target as HTMLElement).closest<HTMLElement>('.timeline-clip')
+    if (!element) return
+    beginDrag(event, element)
+  }, true)
+
+  document.addEventListener('pointermove', moveDrag, true)
+  document.addEventListener('pointerup', endDrag, true)
+  document.addEventListener('pointercancel', endDrag, true)
 }
 
 function updateTimeline() {
@@ -54,6 +241,8 @@ function updateTimeline() {
 
   const project = currentProject()
   if (!project) return
+
+  syncClipData(project)
 
   const total = duration(project)
   const visibleSeconds = Math.max(total, 0.5)
@@ -129,6 +318,7 @@ function schedule() {
 function init() {
   if (!window.location.pathname.startsWith('/editor/')) return
   injectTimelineCss()
+  bindDragHandlers()
   schedule()
 
   const bodyObserver = new MutationObserver(schedule)
