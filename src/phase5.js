@@ -67,7 +67,7 @@ async function ensureLoaded() {
     updateStatus('Carregando motor FFmpeg...', 0.04)
     await ffmpeg.load({
       coreURL: await toBlobURL(`${CORE_BASE}/ffmpeg-core.js`, 'text/javascript'),
-      wasmURL: await toBlobURL(`${CORE_BASE}/ffmpeg-core.wasm`, 'application/wasm`'.replace('`', '')),
+      wasmURL: await toBlobURL(`${CORE_BASE}/ffmpeg-core.wasm`, 'application/wasm'),
     })
     ffmpeg.on('progress', ({ progress }) => updateStatus('Processando vídeo...', progress))
     ffmpeg.on('log', ({ message }) => {
@@ -107,7 +107,8 @@ async function exportWithFFmpeg() {
   try {
     await ensureLoaded()
     updateStatus('Lendo vídeo...', 0.12)
-    const inputName = `input-${Date.now()}.${asset.file?.name?.split('.').pop() || 'mp4'}`
+    const extension = asset.file?.name?.split('.').pop()?.toLowerCase() || 'mp4'
+    const inputName = `input-${Date.now()}.${extension}`
     const outputName = 'meu-video-studio-export.mp4'
     await ffmpeg.writeFile(inputName, await fetchFile(asset.url))
 
