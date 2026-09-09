@@ -2,34 +2,44 @@
 
 ## Objetivo
 
-Substituir a exportação experimental em WebM por processamento real com FFmpeg.wasm executado no navegador, mantendo os arquivos do projeto no ambiente local do usuário.
+Processar a Timeline localmente com FFmpeg.wasm, evitando serviços externos e mantendo a edição no navegador.
 
 ## Implementado
 
 - Motor `@ffmpeg/ffmpeg` integrado ao editor.
-- Carregamento sob demanda do core FFmpeg para não pesar a abertura inicial do aplicativo.
-- Conversão do vídeo selecionado para MP4.
-- Escala e enquadramento conforme formato do projeto.
-- Resolução de saída conforme 720p, 1080p, 2K ou 4K.
+- Carregamento sob demanda do core FFmpeg.
+- Renderização dos clips de vídeo e imagem posicionados na Timeline.
+- Preservação das posições `start` e `duration` dos clips.
+- Suporte a lacunas e sobreposição de clips através de composição por tempo.
+- Enquadramento conforme 16:9, 9:16, 1:1 e 4:5.
+- Resolução 720p, 1080p, 2K e 4K.
 - FPS configurável do projeto.
-- Aplicação dos filtros atuais durante o processamento.
-- Codificação H.264 + AAC.
-- Barra de progresso da exportação.
-- Download automático do arquivo MP4.
+- Aplicação do filtro escolhido durante o processamento.
+- Leitura das faixas de áudio da Timeline.
+- Atraso de cada áudio conforme sua posição `start`.
+- Mixagem das faixas de áudio externas com `amix`.
+- Codificação H.264 + AAC em MP4.
+- Barra de progresso da renderização.
 - Limpeza dos arquivos temporários usados pelo FFmpeg.
+- Download automático do MP4 final.
 
 ## Funcionamento
 
-O core single-thread do FFmpeg é carregado sob demanda a partir do pacote distribuído oficialmente pelo projeto e o processamento ocorre dentro do navegador via WebAssembly. A API oficial utiliza `FFmpeg.load()`, `writeFile()`, `exec()` e `readFile()` para esse fluxo.
+O projeto usa o core single-thread do FFmpeg carregado sob demanda. Os arquivos locais são escritos no sistema virtual de arquivos do FFmpeg e processados no navegador via WebAssembly.
 
-## Limitações desta etapa
+A renderização cria uma composição de fundo, posiciona cada clip conforme o tempo da Timeline e mistura as faixas de áudio com os atrasos correspondentes. Isso permite exportar uma Timeline com vários clips mesmo quando existem espaços entre eles.
 
-A exportação atual processa o vídeo selecionado como uma composição principal. A montagem completa de múltiplos clips, áudio externo sincronizado, transições e textos desenhados no arquivo final ainda será consolidada em uma etapa posterior de renderização.
+## Limitações atuais
 
-## Próxima evolução
+- Textos e legendas ainda são exibidos no preview e não são queimados no MP4 final.
+- Efeitos e transições interativos da Fase 4 ainda não são convertidos integralmente para filtros FFmpeg.
+- A faixa de áudio interna de cada vídeo não é reconstruída como mixagem individual; o foco atual é a faixa de áudio adicionada separadamente na Timeline.
+- Imagens e vídeos usam o início de cada arquivo como fonte do clip; um ponto de entrada separado por clip será adicionado depois.
 
-- Concatenar múltiplos clips da Timeline.
-- Misturar faixas de áudio da Timeline.
-- Renderizar textos e legendas no arquivo final.
-- Levar efeitos e transições para o pipeline FFmpeg.
-- Melhorar presets de exportação e tratamento de erros.
+## Próxima evolução da Fase 5
+
+1. Queimar textos e legendas no render final.
+2. Mapear efeitos e transições da Fase 4 para filtros FFmpeg.
+3. Suportar ponto de entrada e saída por clip.
+4. Melhorar a preservação do áudio original dos vídeos.
+5. Adicionar presets de exportação e informações de tamanho estimado.
