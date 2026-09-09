@@ -6,11 +6,11 @@ Editor de vídeo pessoal, local e gratuito para criação de conteúdo.
 
 **Fase 4 — Recursos avançados: em implementação na `main`.**
 
-A aplicação já possui a fundação do editor, gerenciamento de projetos, importação de vídeo/imagem/áudio, preview, timeline visual, textos, legendas manuais, filtros e biblioteca de efeitos/transições.
+A aplicação possui a fundação do editor, gerenciamento de projetos, importação de vídeo/imagem/áudio, preview, timeline visual, ferramentas de corte/divisão, textos, legendas manuais, filtros e melhorias interativas de efeitos, transições e controles de áudio.
 
 ## Objetivo
 
-O projeto reúne em um único aplicativo ferramentas para criar e organizar projetos, importar vídeos, imagens e áudios, editar e pré-visualizar mídia, trabalhar com timeline, adicionar textos e legendas, aplicar filtros, organizar clips por faixa e evoluir para processamento local completo com FFmpeg.
+O projeto reúne em um único aplicativo ferramentas para criar e organizar projetos, importar vídeos, imagens e áudios, editar e pré-visualizar mídia, trabalhar com timeline, adicionar textos e legendas, aplicar filtros, efeitos e transições e evoluir para processamento local completo com FFmpeg.
 
 ## Tecnologias
 
@@ -51,5 +51,9 @@ A IA é opcional. Não há sistema de contas, cobrança, assinaturas ou painel a
 4. 🔄 Áudio, filtros, efeitos, transições e legendas.
 5. ⏳ FFmpeg.wasm e exportação mais completa.
 6. ⏳ IA opcional para roteiro, ideias, legendas e narração.
+
+## Status da Fase 4
+
+A implementação atual adiciona comportamento interativo para efeitos no preview, animações de transição, controles visuais de áudio, waveform demonstrativa e edição rápida de texto/legendas. O processamento final de todas essas operações será consolidado na Fase 5 com FFmpeg.
 
 Consulte `docs/FASE-4.md` para os detalhes da etapa atual.
