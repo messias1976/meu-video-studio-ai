@@ -2,8 +2,8 @@ const PROJECTS_KEY = 'meu-video-studio-ai:projects:v2'
 const PX_PER_SECOND = 70
 const TIMELINE_LEFT = 120
 
- type Clip = { start?: number; duration?: number; track?: string }
- type Project = { id: string; clips?: Clip[]; playhead?: number }
+type Clip = { start?: number; duration?: number; track?: string }
+type Project = { id: string; clips?: Clip[]; playhead?: number }
 
 function readProjects(): Project[] {
   try {
@@ -32,7 +32,22 @@ function formatTime(value: number): string {
   return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`
 }
 
+function injectTimelineCss() {
+  if (document.getElementById('vfs-dynamic-timeline-css')) return
+  const style = document.createElement('style')
+  style.id = 'vfs-dynamic-timeline-css'
+  style.textContent = `
+    .timeline-canvas{min-width:0!important;position:relative!important}
+    .timeline-track{min-width:0!important}
+    .track-lane{min-width:0!important}
+    .time-ruler{min-width:0!important}
+    .timeline-scroll{overflow-x:auto!important;overflow-y:auto!important}
+  `
+  document.head.appendChild(style)
+}
+
 function updateTimeline() {
+  injectTimelineCss()
   const timeline = document.querySelector('.timeline')
   const canvas = document.querySelector<HTMLElement>('.timeline-canvas')
   if (!timeline || !canvas) return
@@ -41,14 +56,18 @@ function updateTimeline() {
   if (!project) return
 
   const total = duration(project)
-  const visibleSeconds = Math.max(total, total > 0 ? 0.5 : 0)
+  const visibleSeconds = Math.max(total, 0.5)
   const canvasWidth = TIMELINE_LEFT + visibleSeconds * PX_PER_SECOND + 80
 
   canvas.style.width = `${Math.max(canvasWidth, TIMELINE_LEFT + 80)}px`
 
-  canvas.querySelectorAll<HTMLElement>('.timeline-track, .track-lane').forEach(element => {
-    element.style.minWidth = '0'
-    element.style.width = `${Math.max(TIMELINE_LEFT + visibleSeconds * PX_PER_SECOND, 1)}px`
+  canvas.querySelectorAll<HTMLElement>('.timeline-track').forEach(track => {
+    track.style.minWidth = '0'
+    track.style.width = `${Math.max(canvasWidth, 1)}px`
+  })
+  canvas.querySelectorAll<HTMLElement>('.track-lane').forEach(lane => {
+    lane.style.minWidth = '0'
+    lane.style.width = `${Math.max(canvasWidth, 1)}px`
   })
 
   const head = timeline.querySelector<HTMLElement>('.timeline-head span')
@@ -63,8 +82,8 @@ function updateTimeline() {
     ruler.style.width = `${Math.max(1, canvasWidth - TIMELINE_LEFT)}px`
     const step = total <= 12 ? 1 : total <= 60 ? 5 : 10
     const ticks: number[] = []
-    for (let t = 0; t <= total; t += step) ticks.push(t)
-    if (total > 0 && ticks[ticks.length - 1] !== total) ticks.push(total)
+    for (let t = 0; t <= total; t += step) ticks.push(Number(t.toFixed(2)))
+    if (total > 0 && ticks[ticks.length - 1] !== Number(total.toFixed(2))) ticks.push(Number(total.toFixed(2)))
     const signature = ticks.join(',')
     if (ruler.dataset.signature !== signature) {
       ruler.dataset.signature = signature
@@ -79,7 +98,11 @@ function updateTimeline() {
 
   const playhead = timeline.querySelector<HTMLElement>('.playhead')
   if (playhead) {
-    const clamped = Math.max(0, Math.min(total, Number(playhead.dataset.time || project.playhead || 0)))
+    const timeText = playhead.querySelector('span')?.textContent || ''
+    const parsed = timeText.includes(':')
+      ? (() => { const [minutes, seconds] = timeText.split(':').map(Number); return (minutes || 0) * 60 + (seconds || 0) })()
+      : Number(project.playhead || 0)
+    const clamped = Math.max(0, Math.min(total, Number.isFinite(parsed) ? parsed : 0))
     playhead.style.left = `${TIMELINE_LEFT + clamped * PX_PER_SECOND}px`
     const label = playhead.querySelector('span')
     if (label) label.textContent = formatTime(clamped)
@@ -87,40 +110,37 @@ function updateTimeline() {
 
   const range = document.querySelector<HTMLInputElement>('.playback-bar input[type="range"]')
   if (range) {
-    range.max = String(Math.max(total, 0.01))
-    range.value = String(Math.min(Number(range.value) || 0, Math.max(total, 0.01)))
+    const max = Math.max(total, 0.01)
+    range.max = String(max)
+    range.value = String(Math.min(Number(range.value) || 0, max))
   }
 }
 
+let scheduled = false
 function schedule() {
-  requestAnimationFrame(updateTimeline)
+  if (scheduled) return
+  scheduled = true
+  requestAnimationFrame(() => {
+    scheduled = false
+    updateTimeline()
+  })
 }
 
 function init() {
   if (!window.location.pathname.startsWith('/editor/')) return
+  injectTimelineCss()
   schedule()
-  const observer = new MutationObserver(schedule)
-  const watch = () => {
-    const timeline = document.querySelector('.timeline')
-    if (timeline && !timeline.dataset.dynamicDurationObserver) {
-      timeline.dataset.dynamicDurationObserver = '1'
-      observer.observe(timeline, { childList: true, subtree: true })
-    }
-  }
-  watch()
-  const routeObserver = new MutationObserver(watch)
-  routeObserver.observe(document.body, { childList: true, subtree: true })
-  window.addEventListener('storage', schedule)
+
+  const bodyObserver = new MutationObserver(schedule)
+  bodyObserver.observe(document.body, { childList: true, subtree: true })
+
   document.addEventListener('input', schedule, true)
   document.addEventListener('click', schedule, true)
+  window.addEventListener('storage', schedule)
 }
 
-afterRender()
-
-function afterRender() {
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init, { once: true })
-  } else {
-    init()
-  }
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', init, { once: true })
+} else {
+  init()
 }
