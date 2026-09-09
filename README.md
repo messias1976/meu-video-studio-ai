@@ -4,7 +4,7 @@ Editor de vídeo pessoal, local e gratuito para criação de conteúdo.
 
 ## Status atual
 
-**Fase 5 — Processamento local com FFmpeg.wasm: em implementação na `main`.**
+**Fase 5 — Processamento local com FFmpeg.wasm: concluída.**
 
 A aplicação possui a fundação do editor, gerenciamento de projetos, importação de vídeo/imagem/áudio, preview, timeline visual, ferramentas de corte/divisão, textos, legendas manuais, filtros, efeitos, transições e renderização da Timeline com FFmpeg.wasm.
 
@@ -39,9 +39,11 @@ pnpm build
 
 ## Exportação local
 
-A ação **Exportar** utiliza FFmpeg.wasm dentro do navegador. O renderizador atual monta os clips de vídeo e imagem posicionados na Timeline, preserva `start` e `duration`, respeita o formato/resolução/FPS do projeto, aplica o filtro selecionado e mistura as faixas de áudio externas posicionadas na Timeline.
+A ação **Exportar** utiliza FFmpeg.wasm dentro do navegador. O renderizador monta múltiplos clips de vídeo e imagem posicionados na Timeline, preserva `start` e `duration`, respeita o formato/resolução/FPS do projeto, aplica o filtro selecionado e mistura as faixas de áudio externas posicionadas na Timeline.
 
-A composição também pode incorporar os textos/legendas existentes e traduzir efeitos/transições selecionados da Fase 4 para filtros do pipeline FFmpeg. Os arquivos temporários são mantidos no sistema virtual do FFmpeg durante o processamento e removidos ao final.
+A composição também incorpora os textos/legendas existentes e traduz os efeitos/transições selecionados da Fase 4 para filtros do pipeline FFmpeg. Textos são preparados como camadas PNG transparentes com as posições e tamanhos configurados no editor.
+
+Os arquivos temporários são mantidos no sistema virtual do FFmpeg durante o processamento e removidos ao final. O resultado é baixado como MP4 H.264/AAC.
 
 O core FFmpeg é carregado sob demanda, sem servidor próprio de renderização.
 
@@ -57,11 +59,11 @@ A IA é opcional. Não há sistema de contas, cobrança, assinaturas ou painel a
 2. ✅ Editor, mídia, preview e timeline.
 3. ✅ Ferramentas de corte, divisão, texto e velocidade — base funcional.
 4. ✅ Áudio, filtros, efeitos, transições e legendas — base interativa.
-5. 🔄 FFmpeg.wasm, processamento local e renderização da Timeline.
-6. ⏳ IA opcional para roteiro, ideias, legendas e narração.
+5. ✅ FFmpeg.wasm, processamento local e renderização da Timeline.
+6. 🔄 IA opcional para roteiro, ideias, legendas e narração.
 
-## Limites atuais da Fase 5
+## Limites atuais
 
-A renderização já reúne múltiplos clips, imagens, áudio externo e elementos de texto em uma composição única. O refinamento futuro fica concentrado em transições específicas por ponto de corte, entrada/saída independente por clip, volume/fade por faixa e presets avançados de exportação.
+A base da Fase 5 está concluída. Como refinamentos futuros ficam transições independentes entre pares de clips, ponto de entrada/saída por clip, mixagem do áudio original dos vídeos, volume/fades por clip e presets avançados de exportação.
 
-Consulte `docs/FASE-5.md` para os detalhes da etapa atual.
+Consulte `docs/FASE-5.md` para os detalhes técnicos da etapa concluída.
