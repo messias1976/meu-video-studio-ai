@@ -98,7 +98,7 @@ async function ensureLoaded() {
     updateStatus('Carregando motor FFmpeg...', 0.03)
     await ffmpeg.load({
       coreURL: await toBlobURL(`${CORE_BASE}/ffmpeg-core.js`, 'text/javascript'),
-      wasmURL: await toBlobURL(`${CORE_BASE}/ffmpeg-core.wasm`, 'application/wasm`'.replace('`', '')),
+      wasmURL: await toBlobURL(`${CORE_BASE}/ffmpeg-core.wasm`, 'application/wasm'),
     })
     ffmpeg.on('progress', ({ progress }) => updateStatus('Renderizando composição...', 0.15 + progress * 0.75))
     ffmpeg.on('log', ({ message }) => { if (/error|failed|invalid/i.test(message)) console.warn('[FFmpeg]', message) })
@@ -133,7 +133,7 @@ async function writeAssets(project, clips) {
   return written
 }
 
-async function writeTextOverlays(project, texts, width, height) {
+async function writeTextOverlays(texts, width, height) {
   const written = new Map()
   const scale = Math.max(0.5, width / 1080)
   for (const text of texts) {
@@ -208,6 +208,8 @@ function buildVideoGraph(project, videoClips, written, textOverlays, width, heig
     graph.push(`[base${rendered - 1}][v${inputIndex}]overlay=0:0:enable='between(t,${Math.max(0, clip.start).toFixed(3)},${end.toFixed(3)})'[base${rendered}]`)
   })
 
+  if (!rendered) return { inputs, graph: '', output: null, rendered: 0, textRendered: 0 }
+
   let current = `base${rendered}`
   let textIndex = 0
   for (const text of project.texts || []) {
@@ -276,11 +278,12 @@ async function exportTimelineWithFFmpeg() {
     updateStatus('Lendo mídias da Timeline...', 0.10)
     const written = await writeAssets(project, [...videoClips, ...audioClips])
     for (const asset of written.values()) temporaryFiles.push(asset.fileName)
-    const textOverlays = await writeTextOverlays(project, project.texts || [], width, height)
+    const textOverlays = await writeTextOverlays(project.texts || [], width, height)
     for (const overlay of textOverlays.values()) temporaryFiles.push(overlay.fileName)
 
     const video = buildVideoGraph(project, videoClips, written, textOverlays, width, height, total, phase4)
-    const audio = buildAudioGraph(audioClips, written, total, videoClips.filter((clip) => written.has(clip.assetId)).length + video.textRendered)
+    if (!video.rendered || !video.output) throw new Error('Nenhum clip de vídeo pôde ser renderizado.')
+    const audio = buildAudioGraph(audioClips, written, total, video.rendered + video.textRendered)
     const args = []
     video.inputs.forEach((group) => args.push(...group))
     audio.inputs.forEach((group) => args.push(...group))
