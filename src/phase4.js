@@ -1,106 +1,32 @@
 (() => {
-  const EFFECTS = {
-    Glitch: 'glitch', Flash: 'flash', Zoom: 'zoom', Partículas: 'particles', Luz: 'light', Retro: 'retro', Desfoque: 'blur', Cinema: 'cinema',
-  };
-  const TRANSITIONS = ['Fade', 'Slide', 'Zoom', 'Blur', 'Flash', 'Rotate', 'Glitch'];
-  const key = 'meu-video-studio-ai:phase4:v1';
-  const state = (() => { try { return JSON.parse(localStorage.getItem(key) || '{}'); } catch { return {}; } })();
-
+  const EFFECTS = { Glitch:'glitch', Flash:'flash', Partículas:'particles', Luz:'light', Retro:'retro', Desfoque:'blur', Cinema:'cinema' };
+  const TRANSITIONS = ['Fade','Slide','Zoom','Blur','Flash','Rotate','Glitch'];
+  const key = 'meu-video-studio-ai:phase4:v2';
+  const readState = () => { try { return JSON.parse(localStorage.getItem(key) || '{}'); } catch { return {}; } };
+  const state = readState();
   const css = document.createElement('style');
   css.textContent = `
-    .vfs-effect-active { position: relative; isolation:isolate; }
-    .vfs-effect-active::after { content:''; position:absolute; inset:0; pointer-events:none; z-index:2; border-radius:inherit; }
-    .vfs-fx-glitch::after { background:repeating-linear-gradient(0deg,transparent 0 7px,rgba(255,0,100,.10) 8px 9px,rgba(0,220,255,.10) 10px 11px); mix-blend-mode:screen; animation:vfsGlitch .18s steps(2) infinite; }
-    .vfs-fx-flash::after { background:#fff; opacity:.72; animation:vfsFlash .45s ease-out; }
-    .vfs-fx-particles::after { background-image:radial-gradient(circle at 20% 30%,rgba(255,255,255,.7) 0 1px,transparent 2px),radial-gradient(circle at 70% 20%,rgba(255,255,255,.5) 0 1px,transparent 2px),radial-gradient(circle at 55% 75%,rgba(255,255,255,.55) 0 1px,transparent 2px); background-size:120px 120px,170px 170px,200px 200px; animation:vfsParticles 3s linear infinite; opacity:.6; }
-    .vfs-fx-light::after { background:radial-gradient(circle at 50% 10%,rgba(255,220,160,.38),transparent 45%); mix-blend-mode:screen; }
-    .vfs-fx-retro::after { background:repeating-linear-gradient(0deg,rgba(255,255,255,.02) 0 2px,transparent 3px 5px); opacity:.8; }
-    .vfs-fx-blur > video,.vfs-fx-blur > img { filter:blur(3px) !important; }
-    .vfs-fx-cinema > video,.vfs-fx-cinema > img { filter:contrast(1.12) saturate(.92) sepia(.06) !important; }
-    @keyframes vfsGlitch{0%{transform:translate(0)}50%{transform:translate(2px,-1px)}100%{transform:translate(-2px,1px)}}
-    @keyframes vfsFlash{0%{opacity:0}12%{opacity:.72}100%{opacity:0}}
-    @keyframes vfsParticles{from{background-position:0 0,30px 20px,-20px 10px}to{background-position:90px 120px,120px 160px,60px 100px}}
-    .vfs-transition-badge { position:absolute; top:8px; right:8px; z-index:4; padding:4px 7px; border:1px solid rgba(255,255,255,.12); border-radius:6px; background:rgba(0,0,0,.5); color:#ddd; font-size:9px; pointer-events:none; }
-    .vfs-transition-fade { animation:vfsTfade .7s ease both; }
-    .vfs-transition-slide { animation:vfsTslide .7s ease both; }
-    .vfs-transition-zoom { animation:vfsTzoom .7s ease both; }
-    .vfs-transition-blur { animation:vfsTblur .7s ease both; }
-    .vfs-transition-flash { animation:vfsTflash .7s ease both; }
-    .vfs-transition-rotate { animation:vfsTrotate .7s ease both; }
-    .vfs-transition-glitch { animation:vfsTglitch .35s steps(2) both; }
-    @keyframes vfsTfade{from{opacity:0}to{opacity:1}}
-    @keyframes vfsTslide{from{transform:translateX(28px);opacity:0}to{transform:none;opacity:1}}
-    @keyframes vfsTzoom{from{transform:scale(.86);opacity:0}to{transform:none;opacity:1}}
-    @keyframes vfsTblur{from{filter:blur(10px);opacity:.4}to{filter:none;opacity:1}}
-    @keyframes vfsTflash{0%{opacity:.2}30%{filter:brightness(2)}100%{filter:none;opacity:1}}
-    @keyframes vfsTrotate{from{transform:rotate(-4deg) scale(.95);opacity:0}to{transform:none;opacity:1}}
-    @keyframes vfsTglitch{0%{transform:translate(0)}35%{transform:translate(5px,-2px)}70%{transform:translate(-4px,2px)}100%{transform:none}}
-    .vfs-audio-tools { margin-top:8px; padding:9px; border:1px solid rgba(255,255,255,.08); border-radius:9px; background:#0d0d11; display:grid; gap:7px; }
-    .vfs-audio-tools label { display:flex; justify-content:space-between; align-items:center; gap:8px; font-size:9px; color:#8e8f98; }
-    .vfs-audio-tools input[type=range]{width:100%;accent-color:#8b5cf6}
-    .vfs-waveform { height:34px; display:flex; align-items:center; gap:2px; overflow:hidden; }
-    .vfs-waveform i { width:3px; min-width:3px; border-radius:999px; background:#8b5cf6; opacity:.75; }
-    .vfs-toggle { border:1px solid rgba(255,255,255,.08); background:#15151a; color:#aaa; border-radius:7px; padding:5px 8px; font-size:9px; cursor:pointer; }
-    .vfs-toggle.active { color:#fff; background:#3a245d; border-color:#6d43a6; }
+    .vfs-effect-active{position:relative;isolation:isolate}.vfs-effect-active:after{content:'';position:absolute;inset:0;pointer-events:none;z-index:2;border-radius:inherit}
+    .vfs-fx-glitch:after{background:repeating-linear-gradient(0deg,transparent 0 7px,rgba(255,0,100,.10) 8px 9px,rgba(0,220,255,.10) 10px 11px);mix-blend-mode:screen;animation:vfsGlitch .18s steps(2) infinite}
+    .vfs-fx-flash:after{background:#fff;opacity:.72;animation:vfsFlash .45s ease-out}.vfs-fx-particles:after{background-image:radial-gradient(circle at 20% 30%,rgba(255,255,255,.7) 0 1px,transparent 2px),radial-gradient(circle at 70% 20%,rgba(255,255,255,.5) 0 1px,transparent 2px),radial-gradient(circle at 55% 75%,rgba(255,255,255,.55) 0 1px,transparent 2px);background-size:120px 120px,170px 170px,200px 200px;animation:vfsParticles 3s linear infinite;opacity:.6}
+    .vfs-fx-light:after{background:radial-gradient(circle at 50% 10%,rgba(255,220,160,.38),transparent 45%);mix-blend-mode:screen}.vfs-fx-retro:after{background:repeating-linear-gradient(0deg,rgba(255,255,255,.02) 0 2px,transparent 3px 5px);opacity:.8}
+    .vfs-fx-blur>video,.vfs-fx-blur>img{filter:blur(3px)!important}.vfs-fx-cinema>video,.vfs-fx-cinema>img{filter:contrast(1.12) saturate(.92) sepia(.06)!important}
+    @keyframes vfsGlitch{0%{transform:translate(0)}50%{transform:translate(2px,-1px)}100%{transform:translate(-2px,1px)}}@keyframes vfsFlash{0%{opacity:0}12%{opacity:.72}100%{opacity:0}}@keyframes vfsParticles{from{background-position:0 0,30px 20px,-20px 10px}to{background-position:90px 120px,120px 160px,60px 100px}}
+    .vfs-transition-badge{position:absolute;top:8px;right:8px;z-index:4;padding:4px 7px;border:1px solid rgba(255,255,255,.12);border-radius:6px;background:rgba(0,0,0,.55);color:#ddd;font-size:9px;pointer-events:none}
+    .vfs-transition-fade{animation:vfsTfade .7s ease both}.vfs-transition-slide{animation:vfsTslide .7s ease both}.vfs-transition-zoom{animation:vfsTzoom .7s ease both}.vfs-transition-blur{animation:vfsTblur .7s ease both}.vfs-transition-flash{animation:vfsTflash .7s ease both}.vfs-transition-rotate{animation:vfsTrotate .7s ease both}.vfs-transition-glitch{animation:vfsTglitch .35s steps(2) both}
+    @keyframes vfsTfade{from{opacity:0}to{opacity:1}}@keyframes vfsTslide{from{transform:translateX(28px);opacity:0}to{transform:none;opacity:1}}@keyframes vfsTzoom{from{transform:scale(.86);opacity:0}to{transform:none;opacity:1}}@keyframes vfsTblur{from{filter:blur(10px);opacity:.4}to{filter:none;opacity:1}}@keyframes vfsTflash{0%{opacity:.2}30%{filter:brightness(2)}100%{filter:none;opacity:1}}@keyframes vfsTrotate{from{transform:rotate(-4deg) scale(.95);opacity:0}to{transform:none;opacity:1}}@keyframes vfsTglitch{0%{transform:translate(0)}35%{transform:translate(5px,-2px)}70%{transform:translate(-4px,2px)}100%{transform:none}}
+    .vfs-audio-tools{margin-top:8px;padding:9px;border:1px solid rgba(255,255,255,.08);border-radius:9px;background:#0d0d11;display:grid;gap:7px}.vfs-audio-tools label{display:flex;justify-content:space-between;align-items:center;font-size:9px;color:#8e8f98}.vfs-audio-tools input[type=range]{width:100%;accent-color:#8b5cf6}.vfs-waveform{height:34px;display:flex;align-items:center;gap:2px;overflow:hidden}.vfs-waveform i{width:3px;min-width:3px;border-radius:999px;background:#8b5cf6;opacity:.75}.vfs-toggle{border:1px solid rgba(255,255,255,.08);background:#15151a;color:#aaa;border-radius:7px;padding:5px 8px;font-size:9px;cursor:pointer}.vfs-toggle.active{color:#fff;background:#3a245d;border-color:#6d43a6}
   `;
   document.head.appendChild(css);
-
-  function stage() { return document.querySelector('.video-stage'); }
-  function applyEffect(name) {
-    const el = stage(); if (!el) return;
-    Object.values(EFFECTS).forEach(c => el.classList.remove('vfs-fx-'+c));
-    if (name && name !== 'Nenhum') {
-      el.classList.add('vfs-effect-active','vfs-fx-'+EFFECTS[name]);
-      state.effect = name;
-    } else { el.classList.remove('vfs-effect-active'); state.effect = 'Nenhum'; }
-    localStorage.setItem(key, JSON.stringify(state));
-  }
-  function flashTransition(name) {
-    const el = stage(); if (!el) return;
-    TRANSITIONS.forEach(t => el.classList.remove('vfs-transition-'+t.toLowerCase()));
-    el.classList.add('vfs-transition-'+name.toLowerCase());
-    let badge = el.querySelector('.vfs-transition-badge');
-    if (!badge) { badge = document.createElement('span'); badge.className='vfs-transition-badge'; el.appendChild(badge); }
-    badge.textContent = 'Transição: '+name;
-    window.setTimeout(() => { badge?.remove(); el.classList.remove('vfs-transition-'+name.toLowerCase()); }, 750);
-    state.transition = name; localStorage.setItem(key, JSON.stringify(state));
-  }
-  function panelButtons() {
-    document.querySelectorAll('.effect-card').forEach(btn => {
-      const label = (btn.textContent || '').trim();
-      if (EFFECTS[label]) {
-        btn.addEventListener('click', () => applyEffect(label));
-        if (state.effect === label) btn.classList.add('selected');
-      }
-      if (TRANSITIONS.includes(label)) btn.addEventListener('click', () => flashTransition(label));
-    });
-  }
-  function addAudioControls() {
-    document.querySelectorAll('.media-row').forEach(row => {
-      if (row.dataset.vfsBound) return;
-      const kind = (row.textContent || '').toLowerCase();
-      if (!kind.includes('audio')) return;
-      row.dataset.vfsBound='1';
-      const tools=document.createElement('div'); tools.className='vfs-audio-tools';
-      tools.innerHTML='<div class="vfs-waveform"></div><label><span>Volume</span><span class="vfs-vol">100%</span></label><input type="range" min="0" max="100" value="100"><button type="button" class="vfs-toggle">Pré-escuta</button>';
-      row.appendChild(tools);
-      const wave=tools.querySelector('.vfs-waveform');
-      for(let i=0;i<48;i++){const bar=document.createElement('i');bar.style.height=(8+Math.abs(Math.sin(i*1.7))*22)+'px';wave.appendChild(bar)}
-      const range=tools.querySelector('input'); const vol=tools.querySelector('.vfs-vol');
-      range.addEventListener('input',()=>{vol.textContent=range.value+'%'; state.audioVolume=Number(range.value); localStorage.setItem(key,JSON.stringify(state)); document.querySelectorAll('audio').forEach(a=>a.volume=Number(range.value)/100)})
-      const preview=tools.querySelector('.vfs-toggle');
-      preview.addEventListener('click',()=>{ preview.classList.toggle('active'); preview.textContent=preview.classList.contains('active')?'Parar':'Pré-escuta'; const rowButton=row.querySelector('button'); rowButton?.click(); setTimeout(()=>document.querySelectorAll('audio').forEach(a=>{a.volume=Number(range.value)/100}),50); });
-    });
-  }
-  function captionStyle() {
-    document.querySelectorAll('.overlay-text').forEach((el,idx)=>{
-      if (el.dataset.vfsCaption) return;
-      el.dataset.vfsCaption='1';
-      el.addEventListener('dblclick',()=>{ const next=window.prompt('Editar legenda:',el.textContent||''); if(next!==null && 'textContent' in el) el.textContent=next; });
-      if (idx>=0) { el.setAttribute('title','Duplo clique para editar a legenda'); }
-    });
-  }
-  function observe() { panelButtons(); addAudioControls(); captionStyle(); if(state.effect) applyEffect(state.effect); }
-  const observer=new MutationObserver(observe); observer.observe(document.body,{childList:true,subtree:true});
+  const persist = () => localStorage.setItem(key, JSON.stringify(state));
+  const getStage = () => document.querySelector('.video-stage');
+  const panelTitle = (button) => button.closest('.editor-panel')?.querySelector('.panel-header strong')?.textContent?.trim() || '';
+  function applyEffect(name){ const el=getStage(); if(!el)return; Object.values(EFFECTS).forEach(c=>el.classList.remove('vfs-fx-'+c)); el.classList.remove('vfs-effect-active'); if(name && name!=='Nenhum' && EFFECTS[name]){el.classList.add('vfs-effect-active','vfs-fx-'+EFFECTS[name]); state.effect=name;}else{state.effect='Nenhum';} persist(); }
+  function playTransition(name){ const el=getStage(); if(!el)return; TRANSITIONS.forEach(t=>el.classList.remove('vfs-transition-'+t.toLowerCase())); el.classList.add('vfs-transition-'+name.toLowerCase()); let badge=el.querySelector('.vfs-transition-badge'); if(!badge){badge=document.createElement('span');badge.className='vfs-transition-badge';el.appendChild(badge);} badge.textContent='Transição: '+name; window.setTimeout(()=>{badge?.remove();el.classList.remove('vfs-transition-'+name.toLowerCase())},750); state.transition=name; persist(); }
+  function bindEffects(){document.querySelectorAll('.effect-card').forEach(btn=>{if(btn.dataset.vfsBound)return;const label=(btn.textContent||'').trim();const title=panelTitle(btn);if(EFFECTS[label]&&title==='Efeitos'){btn.dataset.vfsBound='1';btn.addEventListener('click',()=>applyEffect(label));if(state.effect===label)btn.classList.add('selected');}else if(TRANSITIONS.includes(label)&&title==='Transições'){btn.dataset.vfsBound='1';btn.addEventListener('click',()=>playTransition(label));}})}
+  function bindAudio(){document.querySelectorAll('.media-row').forEach(row=>{if(row.dataset.vfsAudio)return;const label=(row.querySelector('.media-meta span')?.textContent||'').trim();if(label!=='audio')return;row.dataset.vfsAudio='1';const tools=document.createElement('div');tools.className='vfs-audio-tools';tools.innerHTML='<div class="vfs-waveform"></div><label><span>Volume</span><span class="vfs-vol">'+(state.audioVolume??100)+'%</span></label><input type="range" min="0" max="100" value="'+(state.audioVolume??100)+'"><button type="button" class="vfs-toggle">Pré-escuta</button>';row.appendChild(tools);const wave=tools.querySelector('.vfs-waveform');for(let i=0;i<48;i++){const bar=document.createElement('i');bar.style.height=(7+Math.abs(Math.sin(i*1.37))*25)+'px';wave.appendChild(bar);}const range=tools.querySelector('input');const vol=tools.querySelector('.vfs-vol');range.addEventListener('input',()=>{const v=Number(range.value);vol.textContent=v+'%';state.audioVolume=v;persist();document.querySelectorAll('audio').forEach(a=>a.volume=v/100);});const preview=tools.querySelector('.vfs-toggle');preview.addEventListener('click',()=>{preview.classList.toggle('active');preview.textContent=preview.classList.contains('active')?'Pré-escuta ativa':'Pré-escuta';});});}
+  function bindCaptions(){document.querySelectorAll('.overlay-text').forEach(el=>{if(el.dataset.vfsCaption)return;el.dataset.vfsCaption='1';el.title='Clique para selecionar. Duplo clique para editar.';el.addEventListener('dblclick',()=>{const next=window.prompt('Editar texto/legenda:',el.textContent||'');if(next!==null){el.textContent=next;}});});}
+  function observe(){bindEffects();bindAudio();bindCaptions();if(state.effect)applyEffect(state.effect);}
+  new MutationObserver(observe).observe(document.body,{childList:true,subtree:true});
   observe();
 })();
