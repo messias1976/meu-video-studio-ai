@@ -2,6 +2,12 @@
 
 Editor de vídeo pessoal, local e gratuito para criação de conteúdo.
 
+## Status atual
+
+**Fase 2 — Editor: implementada na `main`.**
+
+A aplicação já possui a fundação do editor pessoal e os principais recursos da segunda fase, incluindo importação de mídia, preview, timeline visual, clips de vídeo/áudio e controles básicos do editor.
+
 ## Objetivo
 
 O projeto reúne em um único aplicativo ferramentas para criar e organizar projetos, importar vídeos, imagens e áudios, editar e pré-visualizar mídia, trabalhar com timeline, adicionar textos e legendas manuais, aplicar filtros, organizar clips por faixa, exportar uma composição local no navegador e usar IA de forma opcional.
@@ -39,9 +45,11 @@ A IA é opcional. A chave fornecida pelo usuário é armazenada no armazenamento
 
 ## Roadmap do projeto
 
-1. Fundação e projetos locais.
-2. Editor, mídia, preview e timeline.
-3. Ferramentas de corte, divisão, texto e velocidade.
-4. Áudio, filtros, efeitos, transições e legendas.
-5. FFmpeg.wasm e exportação mais completa.
-6. IA opcional para roteiro, ideias, legendas e narração.
+1. ✅ Fundação e projetos locais.
+2. ✅ Editor, mídia, preview e timeline.
+3. ⏳ Ferramentas de corte, divisão, texto e velocidade.
+4. ⏳ Áudio, filtros, efeitos, transições e legendas.
+5. ⏳ FFmpeg.wasm e exportação mais completa.
+6. ⏳ IA opcional para roteiro, ideias, legendas e narração.
+
+Consulte `docs/FASE-2.md` para o escopo consolidado da etapa atual.
