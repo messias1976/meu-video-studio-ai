@@ -2,38 +2,52 @@
 
 ## Objetivo
 
-Adicionar recursos de inteligência artificial sem transformar o projeto em SaaS, mantendo a IA opcional e dependente de uma chave fornecida pelo próprio usuário.
+Adicionar recursos de inteligência artificial sem transformar o projeto em SaaS, mantendo a IA opcional, os dados locais e a integração externa limitada à chave fornecida pelo próprio usuário.
 
-## Implementado nesta etapa
+## Implementado
 
 - Assistente de criação com Gemini.
-- Geração rápida de roteiros.
+- Geração de roteiros.
 - Geração de ideias para vídeos.
 - Geração de títulos.
-- Geração de texto para legendas.
-- Ações rápidas dentro do editor para roteiro, ideias, títulos e legendas.
-- Botão para usar o resultado da IA como legenda no editor.
-- Narração por voz do navegador usando `SpeechSynthesis`.
-- Interação sem conta, cobrança ou servidor intermediário.
-- Chave da IA armazenada localmente nas configurações do navegador.
+- Geração de textos para legendas.
+- Ações rápidas de IA dentro do editor.
+- Conversão do resultado da IA em legenda manual do editor.
+- Transcrição de fala para texto usando `SpeechRecognition`/`webkitSpeechRecognition` quando o navegador oferece essa API.
+- Inserção da transcrição no campo de legenda/prompt para edição posterior.
+- Narração local usando `SpeechSynthesis`, com voz em português quando disponível.
+- Controle de velocidade da narração.
+- Parada imediata da narração.
+- Histórico local dos últimos resultados de IA.
+- Chave Gemini armazenada localmente no navegador.
+- Nenhuma conta, cobrança, assinatura ou servidor intermediário.
+
+## Como funciona
+
+### IA de texto
+
+O usuário informa sua própria chave Gemini em **Configurações** ou no painel de IA. Os recursos de roteiro, ideias, títulos e legendas enviam o prompt diretamente para a API Gemini usando essa chave.
+
+### Transcrição
+
+O editor pode iniciar o reconhecimento pelo microfone. A fala reconhecida é acumulada no campo de texto e, ao finalizar, fica disponível para edição e transformação em legenda. O recurso depende do suporte do navegador e de permissão de microfone.
+
+### Narração
+
+A narração é realizada pela voz disponível no sistema através de `SpeechSynthesis`. O texto pode ser ouvido, interrompido e ter sua velocidade ajustada, sem necessidade de serviço de TTS no projeto.
 
 ## Privacidade e custos
 
-O editor continua funcionando sem IA. Quando o usuário usa os recursos Gemini, o texto do pedido é enviado à API configurada pelo próprio usuário usando a chave armazenada localmente.
+O editor continua funcionando sem IA. Os dados de projeto permanecem no `localStorage` do navegador. Quando o usuário aciona o Gemini, o texto do pedido é enviado à API usando a chave configurada por ele.
 
-A narração usa a API de voz disponível no navegador e não exige uma conta separada no projeto.
+A transcrição e a narração por APIs nativas do navegador não exigem uma conta do Meu Video Studio.
 
-## Limitações atuais
+## Limitações conhecidas
 
-- A geração de legendas desta primeira etapa trabalha a partir de texto/prompt e não faz transcrição automática de um arquivo de áudio importado.
-- A narração desta etapa é reprodução por voz do navegador; ainda não gera um arquivo de áudio exportável para a Timeline.
-- A IA usa o modelo Gemini configurado no código atual e a disponibilidade desse modelo pode variar conforme a API/conta utilizada.
+- A transcrição automática depende do suporte do navegador ao `SpeechRecognition` e usa o microfone; ela não decodifica diretamente um arquivo MP3/MP4 sem uma engine de ASR adicional.
+- A narração usa `SpeechSynthesis` e é reproduzida pelo navegador. A API padrão não fornece uma saída de áudio portátil para transformar a fala do sistema em arquivo WAV/MP3 de forma universal.
+- As transições da Fase 5 seguem as limitações descritas em `docs/FASE-5.md`.
 
-## Próxima evolução
+## Resultado da Fase 6
 
-1. Transcrição de áudio para texto.
-2. Geração de legendas com sincronização temporal.
-3. Inserção de narração como mídia de áudio na Timeline.
-4. Assistente com contexto do projeto atual.
-5. Prompts estruturados para roteiro, Reels, Shorts, YouTube e anúncios.
-6. Histórico local de resultados de IA.
+A fase está concluída dentro da proposta de manter o aplicativo pessoal, gratuito e local, com IA opcional. As integrações que exigiriam serviços adicionais permanecem deliberadamente fora do núcleo do projeto.
