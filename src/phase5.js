@@ -2,13 +2,12 @@ import { FFmpeg } from '@ffmpeg/ffmpeg'
 import { fetchFile, toBlobURL } from '@ffmpeg/util'
 
 const PROJECTS_KEY = 'meu-video-studio-ai:projects:v2'
-const PHASE4_KEY = 'meu-video-studio-ai:phase4:v1'
+const PHASE4_KEY = 'meu-video-studio-ai:phase4:v3'
 const CORE_BASE = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/esm'
 const ffmpeg = new FFmpeg()
 let loaded = false
 let loading = null
 let exporting = false
-
 const state = { progress: 0, message: '' }
 
 function getProject() {
@@ -17,9 +16,7 @@ function getProject() {
   try {
     const projects = JSON.parse(localStorage.getItem(PROJECTS_KEY) || '[]')
     return projects.find((project) => project.id === match[1]) || null
-  } catch {
-    return null
-  }
+  } catch { return null }
 }
 
 function getPhase4State() {
@@ -38,7 +35,10 @@ function updateStatus(message, progress) {
 }
 
 function dimensions(project) {
-  const base = project.resolution === '720p' ? [1280, 720] : project.resolution === '2K' ? [2560, 1440] : project.resolution === '4K' ? [3840, 2160] : [1920, 1080]
+  const base = project.resolution === '720p' ? [1280, 720]
+    : project.resolution === '2K' ? [2560, 1440]
+    : project.resolution === '4K' ? [3840, 2160]
+    : [1920, 1080]
   if (project.format === '9:16') return [base[1], base[0]]
   if (project.format === '1:1') return [Math.min(base[0], base[1]), Math.min(base[0], base[1])]
   if (project.format === '4:5') return [Math.round(base[1] * 0.8), base[1]]
@@ -72,14 +72,14 @@ function effectGraph(effect) {
   }
 }
 
-function transitionGraph(name, duration) {
-  const d = Math.max(0.1, Math.min(1, duration || 0.5)).toFixed(3)
+function transitionGraph(name, duration = 0.6) {
+  const d = Math.max(0.1, Math.min(1, duration)).toFixed(3)
   switch (name) {
-    case 'Fade': return `fade=t=in:st=0:d=${d}:alpha=0`
-    case 'Blur': return `fade=t=in:st=0:d=${d}:alpha=0`
-    case 'Flash': return `fade=t=in:st=0:d=${d}:alpha=0`
-    case 'Zoom': return `scale=iw*1.04:ih*1.04,crop=iw/1.04:ih/1.04`
-    case 'Slide': return `fade=t=in:st=0:d=${d}:alpha=0`
+    case 'Fade': return `fade=t=in:st=0:d=${d}`
+    case 'Blur': return `fade=t=in:st=0:d=${d}`
+    case 'Flash': return `eq=brightness='0.35*sin(PI*t/${d})':enable='between(t,0,${d})'`
+    case 'Zoom': return 'scale=iw*1.04:ih*1.04,crop=iw/1.04:ih/1.04'
+    case 'Slide': return `fade=t=in:st=0:d=${d}`
     case 'Rotate': return `rotate=-0.035*PI*sin(PI*t/${d})`
     case 'Glitch': return 'rgbashift=rh=-3:bh=3'
     default: return 'null'
@@ -98,18 +98,13 @@ async function ensureLoaded() {
     updateStatus('Carregando motor FFmpeg...', 0.03)
     await ffmpeg.load({
       coreURL: await toBlobURL(`${CORE_BASE}/ffmpeg-core.js`, 'text/javascript'),
-      wasmURL: await toBlobURL(`${CORE_BASE}/ffmpeg-core.wasm`, 'application/wasm'),
+      wasmURL: await toBlobURL(`${CORE_BASE}/ffmpeg-core.wasm`, 'application/wasm`'.replace('`', '')),
     })
     ffmpeg.on('progress', ({ progress }) => updateStatus('Renderizando composição...', 0.15 + progress * 0.75))
-    ffmpeg.on('log', ({ message }) => {
-      if (/error|failed|invalid/i.test(message)) console.warn('[FFmpeg]', message)
-    })
+    ffmpeg.on('log', ({ message }) => { if (/error|failed|invalid/i.test(message)) console.warn('[FFmpeg]', message) })
     loaded = true
     updateStatus('FFmpeg pronto', 0.08)
-  })().catch((error) => {
-    loading = null
-    throw error
-  })
+  })().catch((error) => { loading = null; throw error })
   return loading
 }
 
@@ -127,11 +122,10 @@ async function writeAssets(project, clips) {
   const unique = new Map()
   clips.forEach((clip) => {
     const asset = project.media.find((item) => item.id === clip.assetId)
-    if (asset) unique.set(asset.id, asset)
+    if (asset?.url) unique.set(asset.id, asset)
   })
   const written = new Map()
   for (const asset of unique.values()) {
-    if (!asset.url) continue
     const fileName = safeName(asset.name, asset.kind === 'audio' ? '.mp3' : asset.kind === 'image' ? '.png' : '.mp4')
     await ffmpeg.writeFile(fileName, await fetchFile(asset.url))
     written.set(asset.id, { ...asset, fileName })
@@ -141,26 +135,42 @@ async function writeAssets(project, clips) {
 
 async function writeTextOverlays(project, texts, width, height) {
   const written = new Map()
+  const scale = Math.max(0.5, width / 1080)
   for (const text of texts) {
     if (!text.text?.trim()) continue
+    const fontSize = Math.max(18, Math.round((text.fontSize || 40) * scale))
+    const font = `${text.weight || 700} ${fontSize}px Arial, sans-serif`
+    const measureCanvas = document.createElement('canvas')
+    const measureCtx = measureCanvas.getContext('2d')
+    if (!measureCtx) continue
+    measureCtx.font = font
+    const lines = String(text.text).split(/\r?\n/)
+    const lineHeight = Math.round(fontSize * 1.2)
+    const pad = Math.max(12, Math.round(14 * scale))
+    const maxWidth = Math.max(32, ...lines.map((line) => measureCtx.measureText(line || ' ').width))
     const canvas = document.createElement('canvas')
-    canvas.width = width
-    canvas.height = height
+    canvas.width = Math.ceil(maxWidth + pad * 2)
+    canvas.height = Math.ceil(lines.length * lineHeight + pad * 2)
     const ctx = canvas.getContext('2d')
     if (!ctx) continue
-    ctx.clearRect(0, 0, width, height)
-    const scale = width / 1080
-    ctx.font = `${Math.max(12, text.weight || 700)} ${Math.max(18, Math.round((text.fontSize || 40) * scale))}px Arial, sans-serif`
+    ctx.clearRect(0, 0, canvas.width, canvas.height)
+    ctx.font = font
     ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'
-    if (text.shadow) { ctx.shadowColor = 'rgba(0,0,0,.85)'; ctx.shadowBlur = 12 * scale; ctx.shadowOffsetY = 3 * scale }
+    if (text.shadow) {
+      ctx.shadowColor = 'rgba(0,0,0,.9)'
+      ctx.shadowBlur = 12 * scale
+      ctx.shadowOffsetY = 3 * scale
+    }
     ctx.fillStyle = text.color || '#ffffff'
-    ctx.fillText(text.text, width * Number(text.x ?? 50) / 100, height * Number(text.y ?? 50) / 100)
+    const centerX = canvas.width / 2
+    const firstY = canvas.height / 2 - ((lines.length - 1) * lineHeight) / 2
+    lines.forEach((line, index) => ctx.fillText(line, centerX, firstY + index * lineHeight))
     const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'))
     if (!blob) continue
     const fileName = `vfs-text-${crypto.randomUUID()}.png`
     await ffmpeg.writeFile(fileName, new Uint8Array(await blob.arrayBuffer()))
-    written.set(text.id, fileName)
+    written.set(text.id, { fileName, width: canvas.width, height: canvas.height })
   }
   return written
 }
@@ -170,9 +180,8 @@ function buildVideoGraph(project, videoClips, written, textOverlays, width, heig
   const filter = filterGraph(project)
   const effect = effectGraph(phase4.effect)
   const transition = transitionGraph(phase4.transition, 0.6)
-  const base = [`color=c=black:s=${width}x${height}:r=${fps}:d=${total}[base0]`]
+  const graph = [`color=c=black:s=${width}x${height}:r=${fps}:d=${total}[base0]`]
   const inputs = []
-  const chains = []
   let rendered = 0
 
   videoClips.forEach((clip) => {
@@ -180,8 +189,9 @@ function buildVideoGraph(project, videoClips, written, textOverlays, width, heig
     if (!asset) return
     const inputIndex = rendered
     rendered += 1
-    inputs.push(asset.kind === 'image' ? ['-loop', '1', '-t', Math.max(0.05, clip.duration).toFixed(3), '-i', asset.fileName] : ['-i', asset.fileName])
-    const source = `[${inputIndex}:v]`
+    inputs.push(asset.kind === 'image'
+      ? ['-loop', '1', '-t', Math.max(0.05, clip.duration).toFixed(3), '-i', asset.fileName]
+      : ['-i', asset.fileName])
     const filters = [
       `scale=${width}:${height}:force_original_aspect_ratio=increase`,
       `crop=${width}:${height}`,
@@ -193,28 +203,27 @@ function buildVideoGraph(project, videoClips, written, textOverlays, width, heig
       effect,
       transition,
     ].filter((item) => item && item !== 'null')
-    chains.push(`${source}${filters.length ? ',' + filters.join(',') : ''}[v${inputIndex}]`)
-    const next = `base${rendered}`
-    base.push(`[base${rendered - 1}][v${inputIndex}]overlay=0:0:enable='between(t,${Math.max(0, clip.start).toFixed(3)},${Math.min(total, clip.start + clip.duration).toFixed(3)})'[${next}]`)
+    graph.push(`[${inputIndex}:v]${filters.join(',')}[v${inputIndex}]`)
+    const end = Math.min(total, clip.start + clip.duration)
+    graph.push(`[base${rendered - 1}][v${inputIndex}]overlay=0:0:enable='between(t,${Math.max(0, clip.start).toFixed(3)},${end.toFixed(3)})'[base${rendered}]`)
   })
 
   let current = `base${rendered}`
   let textIndex = 0
   for (const text of project.texts || []) {
-    const fileName = textOverlays.get(text.id)
-    if (!fileName) continue
+    const overlay = textOverlays.get(text.id)
+    if (!overlay) continue
     const inputIndex = rendered + textIndex
-    inputs.push(['-loop', '1', '-t', Math.max(0.05, total).toFixed(3), '-i', fileName])
+    inputs.push(['-loop', '1', '-t', Math.max(0.05, total).toFixed(3), '-i', overlay.fileName])
+    const x = Math.round(width * Number(text.x ?? 50) / 100 - overlay.width / 2)
+    const y = Math.round(height * Number(text.y ?? 50) / 100 - overlay.height / 2)
     const out = `texted${textIndex}`
-    const x = Math.round(width * Number(text.x ?? 50) / 100)
-    const y = Math.round(height * Number(text.y ?? 50) / 100)
-    base.push(`[${current}][${inputIndex}:v]overlay=${x}: ${y}:enable='between(t,0,${total.toFixed(3)})'[${out}]`.replace(': ', ':'))
+    graph.push(`[${current}][${inputIndex}:v]overlay=${x}:${y}:enable='between(t,0,${total.toFixed(3)})'[${out}]`)
     current = out
     textIndex += 1
   }
 
-  const safeOutput = rendered ? (textIndex ? `[texted${textIndex - 1}]` : `[base${rendered}]`) : '[base0]'
-  return { inputs, graph: [...chains, ...base].join(';'), output: safeOutput, rendered, textRendered: textIndex }
+  return { inputs, graph: graph.join(';'), output: `[${current}]`, rendered, textRendered: textIndex }
 }
 
 function buildAudioGraph(audioClips, written, total, inputOffset) {
@@ -233,18 +242,24 @@ function buildAudioGraph(audioClips, written, total, inputOffset) {
   })
   if (!entries.length) return { inputs, graph: '', output: null, rendered: 0 }
   const mix = entries.map((_, index) => `[a${index}]`).join('')
-  return { inputs, graph: `${entries.join(';')};${mix}amix=inputs=${rendered}:duration=longest:dropout_transition=0,atrim=duration=${total.toFixed(3)},asetpts=PTS-STARTPTS[aout]`, output: '[aout]', rendered }
+  return {
+    inputs,
+    graph: `${entries.join(';')};${mix}amix=inputs=${rendered}:duration=longest:dropout_transition=0,atrim=duration=${total.toFixed(3)},asetpts=PTS-STARTPTS[aout]`,
+    output: '[aout]',
+    rendered,
+  }
 }
 
 async function exportTimelineWithFFmpeg() {
   if (exporting) return
   const project = getProject()
   if (!project) return
-
-  const allVideoClips = project.clips.filter((clip) => clip.track === 'video').sort((a, b) => a.start - b.start)
-  const allAudioClips = project.clips.filter((clip) => clip.track === 'audio').sort((a, b) => a.start - b.start)
-  const videoClips = allVideoClips.filter((clip) => project.media.some((asset) => asset.id === clip.assetId && asset.url))
-  const audioClips = allAudioClips.filter((clip) => project.media.some((asset) => asset.id === clip.assetId && asset.url))
+  const videoClips = project.clips.filter((clip) => clip.track === 'video')
+    .sort((a, b) => a.start - b.start)
+    .filter((clip) => project.media.some((asset) => asset.id === clip.assetId && asset.url))
+  const audioClips = project.clips.filter((clip) => clip.track === 'audio')
+    .sort((a, b) => a.start - b.start)
+    .filter((clip) => project.media.some((asset) => asset.id === clip.assetId && asset.url))
   if (!videoClips.length) {
     updateStatus('Adicione pelo menos um vídeo ou imagem à Timeline.', 0)
     return
@@ -258,18 +273,17 @@ async function exportTimelineWithFFmpeg() {
     const total = Math.max(0.5, ...videoClips.map((clip) => clip.start + clip.duration), ...audioClips.map((clip) => clip.start + clip.duration))
     const [width, height] = dimensions(project)
     const phase4 = getPhase4State()
-    updateStatus('Lendo mídias da Timeline...', 0.1)
+    updateStatus('Lendo mídias da Timeline...', 0.10)
     const written = await writeAssets(project, [...videoClips, ...audioClips])
     for (const asset of written.values()) temporaryFiles.push(asset.fileName)
     const textOverlays = await writeTextOverlays(project, project.texts || [], width, height)
-    for (const fileName of textOverlays.values()) temporaryFiles.push(fileName)
+    for (const overlay of textOverlays.values()) temporaryFiles.push(overlay.fileName)
 
     const video = buildVideoGraph(project, videoClips, written, textOverlays, width, height, total, phase4)
-    const audio = buildAudioGraph(audioClips, written, total, video.rendered + video.textRendered)
+    const audio = buildAudioGraph(audioClips, written, total, videoClips.filter((clip) => written.has(clip.assetId)).length + video.textRendered)
     const args = []
     video.inputs.forEach((group) => args.push(...group))
     audio.inputs.forEach((group) => args.push(...group))
-    if (!video.rendered) throw new Error('Nenhum clip de vídeo pôde ser renderizado.')
     const filterParts = [video.graph, audio.graph].filter(Boolean).join(';')
     args.push('-filter_complex', filterParts, '-map', video.output)
     if (audio.output) args.push('-map', audio.output)
@@ -284,7 +298,7 @@ async function exportTimelineWithFFmpeg() {
     updateStatus('Preparando MP4...', 0.94)
     const data = await ffmpeg.readFile('meu-video-studio-timeline.mp4')
     const bytes = data instanceof Uint8Array ? data : new Uint8Array(data)
-    const blob = new Blob([bytes.buffer], { type: 'video/mp4' })
+    const blob = new Blob([bytes], { type: 'video/mp4' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
@@ -292,13 +306,13 @@ async function exportTimelineWithFFmpeg() {
     document.body.appendChild(a)
     a.click()
     a.remove()
-    URL.revokeObjectURL(url)
+    window.setTimeout(() => URL.revokeObjectURL(url), 1500)
 
     await ffmpeg.deleteFile('meu-video-studio-timeline.mp4').catch(() => {})
     for (const fileName of temporaryFiles) await ffmpeg.deleteFile(fileName).catch(() => {})
     updateStatus(`Exportado: ${video.rendered} clip(s) + ${video.textRendered} texto(s) + ${audio.rendered} áudio(s)`, 1)
     const label = document.querySelector('.vfs-export-progress-label')
-    if (label) label.textContent = 'Exportação concluída. Timeline, textos, efeitos e áudio foram processados.'
+    if (label) label.textContent = 'Exportação concluída com Timeline, textos, efeitos, transições e áudio.'
     window.setTimeout(() => document.querySelector('.modal-card .icon-btn')?.dispatchEvent(new MouseEvent('click', { bubbles: true })), 1300)
   } catch (error) {
     console.error(error)
