@@ -4,13 +4,13 @@ Editor de vídeo pessoal, local e gratuito para criação de conteúdo.
 
 ## Status atual
 
-**Fase 6 — IA opcional: em implementação.**
+**Fase 6 — IA opcional: concluída.**
 
-A aplicação possui a fundação do editor, gerenciamento de projetos, importação de vídeo/imagem/áudio, preview, timeline visual, ferramentas de corte/divisão, textos, legendas manuais, filtros, efeitos, transições, renderização local com FFmpeg.wasm e as primeiras ferramentas de IA opcionais.
+A aplicação possui a fundação do editor, gerenciamento de projetos, importação de vídeo/imagem/áudio, preview, timeline visual, corte/divisão, textos, legendas, filtros, efeitos, transições, processamento local com FFmpeg.wasm e ferramentas opcionais de IA.
 
 ## Objetivo
 
-O projeto reúne em um único aplicativo ferramentas para criar e organizar projetos, importar vídeos, imagens e áudios, editar e pré-visualizar mídia, trabalhar com timeline, adicionar textos e legendas, aplicar filtros, efeitos e transições, processar vídeos localmente e utilizar IA somente quando o usuário desejar.
+O projeto reúne em um único aplicativo ferramentas para criar e organizar projetos, importar vídeos, imagens e áudios, editar e pré-visualizar mídia, trabalhar com timeline, adicionar textos e legendas, aplicar filtros, efeitos e transições, processar vídeos localmente e utilizar IA somente quando desejado.
 
 ## Tecnologias
 
@@ -21,6 +21,7 @@ O projeto reúne em um único aplicativo ferramentas para criar e organizar proj
 - Web APIs de mídia
 - Local Storage
 - FFmpeg.wasm
+- SpeechRecognition/SpeechSynthesis quando disponíveis no navegador
 - Gemini API opcional
 
 ## Rodar localmente
@@ -40,26 +41,30 @@ pnpm build
 
 ## Exportação local
 
-A ação **Exportar** utiliza FFmpeg.wasm dentro do navegador. O renderizador monta múltiplos clips de vídeo e imagem posicionados na Timeline, preserva `start` e `duration`, respeita o formato/resolução/FPS do projeto, aplica filtros e efeitos, sobrepõe textos/legendas e mistura as faixas de áudio externas.
+A ação **Exportar** utiliza FFmpeg.wasm dentro do navegador. O renderizador monta múltiplos clips de vídeo e imagem posicionados na Timeline, preserva `start` e `duration`, respeita formato/resolução/FPS, aplica filtros e efeitos suportados, incorpora textos/legendas e mistura áudio externo.
 
 O resultado é baixado como MP4 H.264/AAC sem servidor próprio de renderização.
 
 ## IA opcional — Fase 6
 
-A primeira etapa da Fase 6 adiciona ferramentas rápidas para:
+A fase concluída adiciona:
 
 - roteiro de vídeo;
 - ideias de conteúdo;
 - títulos;
 - geração de texto para legendas;
-- uso do resultado como legenda dentro do editor;
-- narração por voz disponível no navegador.
+- uso do resultado da IA como legenda dentro do editor;
+- transcrição de fala pelo microfone quando o navegador oferece SpeechRecognition;
+- inserção da transcrição em campos de texto para edição;
+- narração com SpeechSynthesis;
+- controle de velocidade e parada da narração;
+- histórico local dos resultados de IA.
 
-A chave Gemini fica armazenada localmente nas configurações. O editor continua funcionando sem IA, contas ou cobrança.
+A chave Gemini é armazenada localmente. O editor continua funcionando sem IA, contas, cobrança ou assinatura.
 
 ## Dados e privacidade
 
-Projetos e preferências são armazenados localmente no navegador. A IA é opcional e, quando usada, o texto do pedido é enviado diretamente à API Gemini configurada pelo usuário.
+Projetos e preferências são armazenados localmente no navegador. Quando o Gemini é usado, o prompt é enviado diretamente à API configurada pelo usuário.
 
 ## Roadmap do projeto
 
@@ -68,10 +73,14 @@ Projetos e preferências são armazenados localmente no navegador. A IA é opcio
 3. ✅ Ferramentas de corte, divisão, texto e velocidade — base funcional.
 4. ✅ Áudio, filtros, efeitos, transições e legendas — base funcional.
 5. ✅ FFmpeg.wasm, processamento local e renderização da Timeline.
-6. 🔄 IA opcional para roteiro, ideias, legendas e narração.
+6. ✅ IA opcional para roteiro, ideias, legendas, transcrição por voz e narração local.
 
-## Limites atuais da Fase 6
+## Limitações deliberadas
 
-A primeira etapa de IA ainda não transcreve automaticamente um arquivo de áudio importado e a narração por voz do navegador ainda não gera um arquivo de áudio exportável para a Timeline.
+A transcrição automática depende do suporte do navegador e do microfone. Ela não transcreve diretamente MP3/MP4 sem uma engine de reconhecimento de fala adicional.
 
-Consulte `docs/FASE-5.md` e `docs/FASE-6.md` para a documentação técnica das etapas concluídas e em andamento.
+A narração usa SpeechSynthesis. A API padrão do navegador não oferece uma saída universal de WAV/MP3 para transformar a voz do sistema em arquivo da Timeline.
+
+Como refinamentos de edição avançada, permanecem transições independentes entre pares de clips, ponto de entrada/saída por clip, mixagem detalhada do áudio original, volume/fades por clip e presets avançados de exportação.
+
+Consulte `docs/FASE-5.md` e `docs/FASE-6.md` para a documentação técnica.
