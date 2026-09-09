@@ -41,7 +41,9 @@ pnpm build
 
 A ação **Exportar** utiliza FFmpeg.wasm dentro do navegador. O renderizador atual monta os clips de vídeo e imagem posicionados na Timeline, preserva `start` e `duration`, respeita o formato/resolução/FPS do projeto, aplica o filtro selecionado e mistura as faixas de áudio externas posicionadas na Timeline.
 
-O core FFmpeg é carregado sob demanda e os arquivos são processados no sistema virtual do FFmpeg, sem servidor próprio de renderização.
+A composição também pode incorporar os textos/legendas existentes e traduzir efeitos/transições selecionados da Fase 4 para filtros do pipeline FFmpeg. Os arquivos temporários são mantidos no sistema virtual do FFmpeg durante o processamento e removidos ao final.
+
+O core FFmpeg é carregado sob demanda, sem servidor próprio de renderização.
 
 ## Dados e privacidade
 
@@ -60,6 +62,6 @@ A IA é opcional. Não há sistema de contas, cobrança, assinaturas ou painel a
 
 ## Limites atuais da Fase 5
 
-A renderização da Timeline já suporta múltiplos clips e faixas de áudio externas, mas textos/legendas ainda não são queimados no MP4 final. Efeitos e transições da Fase 4 também ainda precisam ser traduzidos para filtros FFmpeg, e o ponto de entrada/saída independente de cada clip será refinado em uma próxima etapa.
+A renderização já reúne múltiplos clips, imagens, áudio externo e elementos de texto em uma composição única. O refinamento futuro fica concentrado em transições específicas por ponto de corte, entrada/saída independente por clip, volume/fade por faixa e presets avançados de exportação.
 
 Consulte `docs/FASE-5.md` para os detalhes da etapa atual.
