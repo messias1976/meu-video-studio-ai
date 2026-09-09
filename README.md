@@ -4,13 +4,13 @@ Editor de vídeo pessoal, local e gratuito para criação de conteúdo.
 
 ## Status atual
 
-**Fase 2 — Editor: implementada na `main`.**
+**Fase 4 — Recursos avançados: em implementação na `main`.**
 
-A aplicação já possui a fundação do editor pessoal e os principais recursos da segunda fase, incluindo importação de mídia, preview, timeline visual, clips de vídeo/áudio e controles básicos do editor.
+A aplicação já possui a fundação do editor, gerenciamento de projetos, importação de vídeo/imagem/áudio, preview, timeline visual, textos, legendas manuais, filtros e biblioteca de efeitos/transições.
 
 ## Objetivo
 
-O projeto reúne em um único aplicativo ferramentas para criar e organizar projetos, importar vídeos, imagens e áudios, editar e pré-visualizar mídia, trabalhar com timeline, adicionar textos e legendas manuais, aplicar filtros, organizar clips por faixa, exportar uma composição local no navegador e usar IA de forma opcional.
+O projeto reúne em um único aplicativo ferramentas para criar e organizar projetos, importar vídeos, imagens e áudios, editar e pré-visualizar mídia, trabalhar com timeline, adicionar textos e legendas, aplicar filtros, organizar clips por faixa e evoluir para processamento local completo com FFmpeg.
 
 ## Tecnologias
 
@@ -39,17 +39,17 @@ pnpm build
 
 ## Dados e privacidade
 
-Projetos e preferências são armazenados localmente no navegador nesta versão. Arquivos importados usam URLs temporárias do navegador durante a sessão.
+Projetos e preferências são armazenados localmente no navegador. Arquivos importados usam URLs temporárias durante a sessão atual.
 
-A IA é opcional. A chave fornecida pelo usuário é armazenada no armazenamento local do navegador para facilitar o uso pessoal. Não há sistema de contas, cobrança, assinaturas ou painel administrativo.
+A IA é opcional. Não há sistema de contas, cobrança, assinaturas ou painel administrativo.
 
 ## Roadmap do projeto
 
 1. ✅ Fundação e projetos locais.
 2. ✅ Editor, mídia, preview e timeline.
-3. ⏳ Ferramentas de corte, divisão, texto e velocidade.
-4. ⏳ Áudio, filtros, efeitos, transições e legendas.
+3. ✅ Ferramentas de corte, divisão, texto e velocidade — base funcional.
+4. 🔄 Áudio, filtros, efeitos, transições e legendas.
 5. ⏳ FFmpeg.wasm e exportação mais completa.
 6. ⏳ IA opcional para roteiro, ideias, legendas e narração.
 
-Consulte `docs/FASE-2.md` para o escopo consolidado da etapa atual.
+Consulte `docs/FASE-4.md` para os detalhes da etapa atual.
