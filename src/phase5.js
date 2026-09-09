@@ -112,42 +112,50 @@ function buildVideoGraph(project, videoClips, written, width, height, total) {
   const base = [`color=c=black:s=${width}x${height}:r=${fps}:d=${total}[base0]`]
   const inputs = []
   const chains = []
-  videoClips.forEach((clip, index) => {
+  let rendered = 0
+  videoClips.forEach((clip) => {
     const asset = written.get(clip.assetId)
     if (!asset) return
+    const inputIndex = rendered
+    rendered += 1
     inputs.push(asset.kind === 'image' ? ['-loop', '1', '-t', clip.duration.toFixed(3), '-i', asset.fileName] : ['-i', asset.fileName])
-    const source = `[${index}:v]`
-    const chain = `${source}scale=${width}:${height}:force_original_aspect_ratio=increase,crop=${width}:${height},setsar=1,fps=${fps},trim=duration=${Math.max(0.05, clip.duration).toFixed(3)},setpts=PTS-STARTPTS${filter !== 'null' ? `,${filter}` : ''}[v${index}]`
+    const source = `[${inputIndex}:v]`
+    const chain = `${source}scale=${width}:${height}:force_original_aspect_ratio=increase,crop=${width}:${height},setsar=1,fps=${fps},trim=duration=${Math.max(0.05, clip.duration).toFixed(3)},setpts=PTS-STARTPTS${filter !== 'null' ? `,${filter}` : ''}[v${inputIndex}]`
     chains.push(chain)
-    const next = `base${index + 1}`
-    base.push(`[base${index}][v${index}]overlay=0:0:enable='between(t,${Math.max(0, clip.start).toFixed(3)},${Math.min(total, clip.start + clip.duration).toFixed(3)})'[${next}]`)
+    const next = `base${rendered}`
+    base.push(`[base${rendered - 1}][v${inputIndex}]overlay=0:0:enable='between(t,${Math.max(0, clip.start).toFixed(3)},${Math.min(total, clip.start + clip.duration).toFixed(3)})'[${next}]`)
   })
-  return { inputs, graph: [...chains, ...base].join(';'), output: `[base${videoClips.length}]` }
+  return { inputs, graph: [...chains, ...base].join(';'), output: `[base${rendered}]`, rendered }
 }
 
 function buildAudioGraph(audioClips, written, total, inputOffset) {
   const entries = []
   const inputs = []
-  audioClips.forEach((clip, index) => {
+  let rendered = 0
+  audioClips.forEach((clip) => {
     const asset = written.get(clip.assetId)
     if (!asset) return
     inputs.push(['-i', asset.fileName])
-    const ffIndex = inputOffset + index
+    const ffIndex = inputOffset + rendered
     const delayMs = Math.max(0, Math.round((clip.start || 0) * 1000))
     const duration = Math.max(0.05, Math.min(clip.duration || total, total))
-    entries.push(`[${ffIndex}:a]atrim=duration=${duration.toFixed(3)},asetpts=PTS-STARTPTS,adelay=${delayMs}:all=1[a${index}]`)
+    entries.push(`[${ffIndex}:a]atrim=duration=${duration.toFixed(3)},asetpts=PTS-STARTPTS,adelay=${delayMs}:all=1[a${rendered}]`)
+    rendered += 1
   })
-  if (!entries.length) return { inputs, graph: '', output: null }
+  if (!entries.length) return { inputs, graph: '', output: null, rendered: 0 }
   const mix = entries.map((_, index) => `[a${index}]`).join('')
-  return { inputs, graph: `${entries.join(';')};${mix}amix=inputs=${entries.length}:duration=longest:dropout_transition=0,atrim=duration=${total.toFixed(3)},asetpts=PTS-STARTPTS[aout]`, output: '[aout]' }
+  return { inputs, graph: `${entries.join(';')};${mix}amix=inputs=${rendered}:duration=longest:dropout_transition=0,atrim=duration=${total.toFixed(3)},asetpts=PTS-STARTPTS[aout]`, output: '[aout]', rendered }
 }
 
 async function exportTimelineWithFFmpeg() {
   if (exporting) return
   const project = getProject()
   if (!project) return
-  const videoClips = project.clips.filter((clip) => clip.track === 'video').sort((a, b) => a.start - b.start)
-  const audioClips = project.clips.filter((clip) => clip.track === 'audio').sort((a, b) => a.start - b.start)
+
+  const allVideoClips = project.clips.filter((clip) => clip.track === 'video').sort((a, b) => a.start - b.start)
+  const allAudioClips = project.clips.filter((clip) => clip.track === 'audio').sort((a, b) => a.start - b.start)
+  const videoClips = allVideoClips.filter((clip) => project.media.some((asset) => asset.id === clip.assetId && asset.url))
+  const audioClips = allAudioClips.filter((clip) => project.media.some((asset) => asset.id === clip.assetId && asset.url))
   if (!videoClips.length) {
     updateStatus('Adicione pelo menos um vídeo ou imagem à Timeline.', 0)
     return
@@ -162,14 +170,14 @@ async function exportTimelineWithFFmpeg() {
     const [width, height] = dimensions(project)
     updateStatus('Lendo mídias da Timeline...', 0.1)
     const written = await writeAssets(project, [...videoClips, ...audioClips])
-    written.forEach?.(() => {})
-    written.values().forEach((asset) => temporaryFiles.push(asset.fileName))
+    written.forEach((asset) => temporaryFiles.push(asset.fileName))
 
     const video = buildVideoGraph(project, videoClips, written, width, height, total)
-    const audio = buildAudioGraph(audioClips, written, total, videoClips.length)
+    const audio = buildAudioGraph(audioClips, written, total, video.rendered)
     const args = []
     video.inputs.forEach((group) => args.push(...group))
     audio.inputs.forEach((group) => args.push(...group))
+    if (!video.rendered) throw new Error('Nenhum clip de vídeo pôde ser renderizado.')
     const filterParts = [video.graph, audio.graph].filter(Boolean).join(';')
     args.push('-filter_complex', filterParts, '-map', video.output)
     if (audio.output) args.push('-map', audio.output)
@@ -177,7 +185,7 @@ async function exportTimelineWithFFmpeg() {
     if (audio.output) args.push('-c:a', 'aac', '-b:a', '192k')
     args.push('-t', total.toFixed(3), '-movflags', '+faststart', 'meu-video-studio-timeline.mp4')
 
-    updateStatus('Renderizando Timeline completa...', 0.18)
+    updateStatus(`Renderizando ${video.rendered} clip(s) da Timeline...`, 0.18)
     const code = await ffmpeg.exec(args)
     if (code !== 0) throw new Error(`FFmpeg terminou com código ${code}`)
 
@@ -196,7 +204,7 @@ async function exportTimelineWithFFmpeg() {
 
     await ffmpeg.deleteFile('meu-video-studio-timeline.mp4').catch(() => {})
     for (const fileName of temporaryFiles) await ffmpeg.deleteFile(fileName).catch(() => {})
-    updateStatus(`Exportado: ${videoClips.length} clip(s) + ${audioClips.length} faixa(s)`, 1)
+    updateStatus(`Exportado: ${video.rendered} clip(s) + ${audio.rendered} faixa(s)`, 1)
     const label = document.querySelector('.vfs-export-progress-label')
     if (label) label.textContent = 'Exportação concluída. A Timeline completa foi renderizada em MP4.'
     window.setTimeout(() => document.querySelector('.modal-card .icon-btn')?.dispatchEvent(new MouseEvent('click', { bubbles: true })), 1200)
