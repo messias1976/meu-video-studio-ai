@@ -28,6 +28,8 @@ let currentAssetKey = ''
 let state: ViewState = { ...defaults }
 let resizeState: { direction: string; startX: number; startY: number; startScale: number; width: number; height: number } | null = null
 let dragState: { startX: number; startY: number; x: number; y: number } | null = null
+let observer: MutationObserver | null = null
+let mountScheduled = false
 
 function projectId() {
   return window.location.pathname.match(/\/editor\/([^/]+)/)?.[1] || 'default'
@@ -42,7 +44,7 @@ function assetKey() {
   return `${projectId()}::${src}`
 }
 
-function readState() {
+function readState(): ViewState {
   const saved = readAll()[assetKey()] || {}
   return {
     timelinePxPerSecond: Math.max(35, Math.min(140, Number(saved.timelinePxPerSecond) || defaults.timelinePxPerSecond)),
@@ -111,7 +113,6 @@ function applyMedia() {
   const rotationInput = panel?.querySelector<HTMLInputElement>('[data-rotation-input]'); if (rotationInput) rotationInput.value = String(Math.round(state.rotation))
   if (box) box.style.transform = `translate(-50%,-50%) translate3d(${state.mediaX}px, ${state.mediaY}px, 0) scale(${Math.abs(state.mediaScale) / 100}) rotate(${state.rotation}deg)`
 }
-
 function setTransform(patch: Partial<ViewState>) { state = { ...state, ...patch }; saveState(patch); applyMedia() }
 function resetMedia() { setTransform({ ...defaults }) }
 function fitMedia() { setTransform({ mediaScale: 100, mediaX: 0, mediaY: 0, rotation: 0, flipX: false }) }
@@ -205,9 +206,34 @@ function mountControls() {
   }
 }
 
+function relevantMutation(mutations: MutationRecord[]) {
+  return mutations.some(mutation => {
+    if (mutation.type !== 'childList') return false
+    const nodes = [...Array.from(mutation.addedNodes), ...Array.from(mutation.removedNodes)]
+    return nodes.some(node => {
+      if (!(node instanceof Element)) return false
+      if (node.matches('.vfs-transform-layer, .vfs-transform-panel, #vfs-timeline-scale')) return false
+      return node.matches('.video-stage, .video-stage video, .video-stage img') || Boolean(node.querySelector('.video-stage, .video-stage video, .video-stage img'))
+    })
+  })
+}
+
+function scheduleMount() {
+  if (mountScheduled) return
+  mountScheduled = true
+  requestAnimationFrame(() => {
+    mountScheduled = false
+    mountControls()
+    mount()
+  })
+}
+
 function init() {
-  mountControls(); mount()
-  const observer = new MutationObserver(() => { mountControls(); mount() }); observer.observe(document.body, { childList:true, subtree:true })
+  scheduleMount()
+  observer = new MutationObserver(mutations => {
+    if (relevantMutation(mutations)) scheduleMount()
+  })
+  observer.observe(document.body, { childList: true, subtree: true })
   window.addEventListener('resize', positionPanel)
   window.addEventListener('pointermove', handleResize, true)
   window.addEventListener('pointerup', endResize, true)
