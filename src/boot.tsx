@@ -1,7 +1,6 @@
 import React from 'react'
 import { createRoot } from 'react-dom/client'
-import App from './App'
-import './styles.css'
+import StudioApp from './studio/StudioApp'
 
 class RuntimeErrorBoundary extends React.Component<React.PropsWithChildren, { error: Error | null }> {
   state = { error: null as Error | null }
@@ -41,7 +40,7 @@ if (!root) throw new Error('Elemento #root não encontrado')
 createRoot(root).render(
   <React.StrictMode>
     <RuntimeErrorBoundary>
-      <App />
+      <StudioApp />
     </RuntimeErrorBoundary>
   </React.StrictMode>,
 )
