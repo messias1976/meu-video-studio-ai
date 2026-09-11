@@ -3,10 +3,8 @@
 .fx-selection{display:none!important}
 .fx-preview-media{object-fit:contain!important;object-position:center center!important}
 
-/* Mantém apenas o comportamento estrutural; posição, largura e altura vêm do clipe. */
 .fx-layer{position:absolute!important;transform-origin:center center!important}
 
-/* Todas as barras ficam invisíveis até o ponteiro entrar na área. */
 .fx-assets,
 .fx-inspector-panel,
 .fx-rail-scroll,
@@ -42,7 +40,17 @@
   background:#3a414d;
 }
 
-.fx-timeline-scroll{
-  overflow-x:auto!important;
-  overflow-y:hidden!important;
-}
+.fx-timeline-scroll{overflow-x:auto!important;overflow-y:hidden!important}
+.fx-export-render-modal{width:min(560px,calc(100vw - 40px))}
+.fx-export-render-modal .fx-field>select{width:100%;min-height:40px;padding:0 12px;border:1px solid #303744;border-radius:8px;background:#11151d;color:#fff;outline:none}
+.fx-export-render-modal .fx-field>select:focus{border-color:#6756e8}
+.fx-modal-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:18px}
+.fx-render-status{margin-top:16px;padding:12px;border:1px solid #292f3b;border-radius:10px;background:#0f131a}
+.fx-render-status>div:first-child{display:flex;justify-content:space-between;gap:12px;margin-bottom:8px}
+.fx-render-status span{color:#b7bdc9;font-size:12px;line-height:1.4}
+.fx-render-status b{color:#fff;font-size:12px}
+.fx-render-bar{height:7px;overflow:hidden;border-radius:99px;background:#202631}
+.fx-render-bar i{display:block;height:100%;border-radius:99px;background:#7356ea;transition:width .08s linear}
+.fx-export-error{padding:10px 12px;border-radius:8px;background:#2a1717;color:#ffb4b4;font-size:12px;margin-top:12px}
+.spin{animation:fx-spin 1s linear infinite}
+@keyframes fx-spin{to{transform:rotate(360deg)}}
