@@ -1,6 +1,7 @@
 import React from 'react'
 import { createRoot } from 'react-dom/client'
 import StudioApp from './studio/StudioAppFinal'
+import ProjectSettings from './studio/ProjectSettings'
 import './studio/final-overrides.css'
 import './studio/window-fit.css'
 import './studio/media-delete-visible.css'
@@ -16,4 +17,4 @@ class RuntimeErrorBoundary extends React.Component<React.PropsWithChildren, { er
 }
 const root=document.getElementById('root')
 if(!root) throw new Error('Elemento #root não encontrado')
-createRoot(root).render(<React.StrictMode><RuntimeErrorBoundary><StudioApp/></RuntimeErrorBoundary></React.StrictMode>)
+createRoot(root).render(<React.StrictMode><RuntimeErrorBoundary><><StudioApp/><ProjectSettings/></></RuntimeErrorBoundary></React.StrictMode>)
