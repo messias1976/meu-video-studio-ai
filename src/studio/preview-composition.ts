@@ -4,21 +4,28 @@ import { useEditorStore } from '../editor/store'
 function syncPreview() {
   const { project } = useEditorStore.getState()
   const layers = Array.from(document.querySelectorAll<HTMLElement>('.fx-layer'))
+  const activeClips = project.clips
+    .filter(c => c.track !== 'audio' && project.playhead >= c.start && project.playhead < c.start + c.duration)
+    .sort((a, b) => b.trackIndex - a.trackIndex)
   const videos = Array.from(document.querySelectorAll<HTMLVideoElement>('.fx-layer video'))
 
-  // Cada vídeo recebe o frame correspondente ao ponto atual da agulha.
-  // A ordem visual continua sendo a ordem das camadas criada pelo React.
   videos.forEach(video => {
     const layer = video.closest('.fx-layer') as HTMLElement | null
     if (!layer) return
     const layerIndex = layers.indexOf(layer)
-    const clip = project.clips.filter(c => c.track !== 'audio' && project.playhead >= c.start && project.playhead < c.start + c.duration)[layerIndex]
+    const clip = activeClips[layerIndex]
     if (!clip) return
+
     const localTime = Math.max(0, project.playhead - clip.start)
     try {
-      if (Number.isFinite(localTime) && Math.abs(video.currentTime - localTime) > 0.04) video.currentTime = localTime
-      if (project.isPlaying) void video.play().catch(() => undefined)
-      else video.pause()
+      if (Number.isFinite(localTime) && Math.abs(video.currentTime - localTime) > 0.04) {
+        video.currentTime = localTime
+      }
+      if (project.isPlaying) {
+        void video.play().catch(() => undefined)
+      } else {
+        video.pause()
+      }
     } catch {
       // O elemento pode estar sendo desmontado durante uma troca de playhead/camada.
     }
