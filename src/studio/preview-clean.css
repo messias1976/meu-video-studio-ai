@@ -3,7 +3,7 @@
 .fx-selection{display:none!important}
 .fx-preview-media{object-fit:contain!important;object-position:center center!important}
 
-/* Não sobrescreve posição/tamanho definidos pelo clipe. */
+/* Mantém apenas o comportamento estrutural; posição, largura e altura vêm do clipe. */
 .fx-layer{position:absolute!important;transform-origin:center center!important}
 
 /* Todas as barras ficam invisíveis até o ponteiro entrar na área. */
@@ -42,7 +42,6 @@
   background:#3a414d;
 }
 
-/* A timeline é horizontal. A altura já é fixa pelas trilhas, portanto não cria rolagem vertical. */
 .fx-timeline-scroll{
   overflow-x:auto!important;
   overflow-y:hidden!important;
