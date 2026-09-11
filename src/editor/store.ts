@@ -17,6 +17,7 @@ type EditorState = {
   deleteClip: (id: string) => void
   deleteMedia: (assetId: string) => void
   duplicateClip: (id: string) => void
+  setProjectName: (name: string) => void
   setProjectSettings: (resolution: { width: number; height: number }, fps: number) => void
   undo: () => void
   redo: () => void
@@ -32,7 +33,7 @@ function normalizeProject(value: unknown): Project {
   const raw = value as Partial<Project>
   return { ...base, ...raw,
     id: typeof raw.id === 'string' ? raw.id : base.id,
-    name: typeof raw.name === 'string' ? raw.name : base.name,
+    name: typeof raw.name === 'string' && raw.name.trim() ? raw.name : base.name,
     createdAt: typeof raw.createdAt === 'string' ? raw.createdAt : base.createdAt,
     updatedAt: typeof raw.updatedAt === 'string' ? raw.updatedAt : base.updatedAt,
     fps: Number.isFinite(raw.fps) ? Number(raw.fps) : base.fps,
@@ -65,6 +66,7 @@ export const useEditorStore = create<EditorState>((set) => ({
   deleteClip: id => set(s => { const before = snapshot(); const p = { ...current, clips: current.clips.filter(c => c.id !== id), updatedAt: new Date().toISOString() }; persist(p); return { ...s, project: p, selectedClipId: s.selectedClipId === id ? null : s.selectedClipId, history: [...s.history, before], future: [], canUndo: true, canRedo: false } }),
   deleteMedia: assetId => set(s => { if (!current.media.some(m => m.id === assetId)) return s; const before = snapshot(); const p = { ...current, media: current.media.filter(m => m.id !== assetId), clips: current.clips.filter(c => c.assetId !== assetId), updatedAt: new Date().toISOString() }; persist(p); return { ...s, project: p, selectedClipId: p.clips.some(c => c.id === s.selectedClipId) ? s.selectedClipId : null, history: [...s.history, before], future: [], canUndo: true, canRedo: false } }),
   duplicateClip: id => set(s => { const source = current.clips.find(c => c.id === id); if (!source) return s; const before = snapshot(); const c: Clip = { ...source, id: crypto.randomUUID(), start: source.start + source.duration + 0.05, name: `${source.name} cópia` }; const p = { ...current, clips: [...current.clips, c], updatedAt: new Date().toISOString() }; persist(p); return { project: p, selectedClipId: c.id, history: [...s.history, before], future: [], canUndo: true, canRedo: false } }),
+  setProjectName: name => set(s => { const clean = name.trim() || 'Projeto sem título'; if (clean === current.name) return s; const before = snapshot(); const p = { ...current, name: clean, updatedAt: new Date().toISOString() }; persist(p); return { ...s, project: p, history: [...s.history, before], future: [], canUndo: true, canRedo: false } }),
   setProjectSettings: (resolution, fps) => set(s => { const width = Math.round(Math.max(320, Math.min(7680, resolution.width || 1920))); const height = Math.round(Math.max(320, Math.min(7680, resolution.height || 1080))); const safeFps = [24, 25, 30, 50, 60].includes(fps) ? fps : 30; if (current.resolution.width === width && current.resolution.height === height && current.fps === safeFps) return s; const before = snapshot(); const p = { ...current, resolution: { width, height }, fps: safeFps, updatedAt: new Date().toISOString() }; persist(p); return { ...s, project: p, history: [...s.history, before], future: [], canUndo: true, canRedo: false } }),
   undo: () => set(s => { const prev = s.history.at(-1); if (!prev) return s; const future = [{ project: structuredClone(current) }, ...s.future]; const history = s.history.slice(0, -1); persist(prev.project); return { ...s, project: prev.project, history, future, canUndo: history.length > 0, canRedo: true } }),
   redo: () => set(s => { const next = s.future[0]; if (!next) return s; const history = [...s.history, { project: structuredClone(current) }]; const future = s.future.slice(1); persist(next.project); return { ...s, project: next.project, history, future, canUndo: true, canRedo: future.length > 0 } }),
