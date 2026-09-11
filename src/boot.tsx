@@ -4,6 +4,7 @@ import StudioApp from './studio/StudioAppFixed'
 import ProjectSettings from './studio/ProjectSettings'
 import ProjectNameEditor from './studio/ProjectNameEditor'
 import TimelineInteractions from './studio/timeline-interactions'
+import PreviewComposition from './studio/preview-composition'
 import './studio/preview-clean.css'
 import './studio/window-fit.css'
 
@@ -17,4 +18,4 @@ class RuntimeErrorBoundary extends React.Component<React.PropsWithChildren, { er
 }
 const root=document.getElementById('root')
 if(!root) throw new Error('Elemento #root não encontrado')
-createRoot(root).render(<React.StrictMode><RuntimeErrorBoundary><><StudioApp/><ProjectSettings/><ProjectNameEditor/><TimelineInteractions/></></RuntimeErrorBoundary></React.StrictMode>)
+createRoot(root).render(<React.StrictMode><RuntimeErrorBoundary><><StudioApp/><ProjectSettings/><ProjectNameEditor/><TimelineInteractions/><PreviewComposition/></></RuntimeErrorBoundary></React.StrictMode>)
