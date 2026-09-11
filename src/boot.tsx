@@ -7,6 +7,7 @@ import TimelineInteractions from './studio/timeline-interactions'
 import PreviewComposition from './studio/preview-composition'
 import ExportController from './studio/ExportController'
 import PreviewInteractionController from './studio/PreviewInteractionController'
+import TextEditingController from './studio/TextEditingController'
 import './studio/preview-clean.css'
 import './studio/window-fit.css'
 
@@ -20,4 +21,4 @@ class RuntimeErrorBoundary extends React.Component<React.PropsWithChildren, { er
 }
 const root=document.getElementById('root')
 if(!root) throw new Error('Elemento #root não encontrado')
-createRoot(root).render(<React.StrictMode><RuntimeErrorBoundary><><StudioApp/><ProjectSettings/><ProjectNameEditor/><TimelineInteractions/><PreviewComposition/><ExportController/><PreviewInteractionController/></></RuntimeErrorBoundary></React.StrictMode>)
+createRoot(root).render(<React.StrictMode><RuntimeErrorBoundary><><StudioApp/><ProjectSettings/><ProjectNameEditor/><TimelineInteractions/><PreviewComposition/><ExportController/><PreviewInteractionController/><TextEditingController/></></RuntimeErrorBoundary></React.StrictMode>)
