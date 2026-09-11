@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import StudioApp from './studio/StudioAppFinal'
 import './studio/final-overrides.css'
 import './studio/window-fit.css'
+import './studio/media-delete-visible.css'
 import './studio/media-actions'
 
 class RuntimeErrorBoundary extends React.Component<React.PropsWithChildren, { error: Error | null }> {
