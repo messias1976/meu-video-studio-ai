@@ -20,6 +20,8 @@ function seekFromClientX(clientX: number) {
 }
 
 function getClipFromElement(el: HTMLElement) {
+  const clipId = el.dataset.clipId
+  if (clipId) return useEditorStore.getState().project.clips.find(c => c.id === clipId) ?? null
   const row = el.closest('.fx-track-row') as HTMLElement | null
   if (!row) return null
   const rows = Array.from(document.querySelectorAll<HTMLElement>('.fx-track-row'))
@@ -29,18 +31,6 @@ function getClipFromElement(el: HTMLElement) {
   if (trackIndex < 0 || clipIndex < 0) return null
   const clips = useEditorStore.getState().project.clips.filter(c => c.trackIndex === trackIndex)
   return clips[clipIndex] ?? null
-}
-
-function commitVisualClipTiming(el: HTMLElement) {
-  const clip = getClipFromElement(el)
-  if (!clip) return
-  const pps = getPps()
-  const left = Number.parseFloat(el.style.left)
-  const width = Number.parseFloat(el.style.width)
-  if (!Number.isFinite(left) || !Number.isFinite(width) || pps <= 0) return
-  const start = Math.max(0, left / pps)
-  const duration = Math.max(0.05, width / pps)
-  useEditorStore.getState().setClipTiming(clip.id, Number(start.toFixed(2)), Number(duration.toFixed(2)))
 }
 
 export default function TimelineInteractions() {
@@ -100,11 +90,9 @@ export default function TimelineInteractions() {
           if (target.closest('.fx-clip-handle')) return
           const clip = getClipFromElement(el)
           if (!clip) return
-
           event.preventDefault()
           event.stopPropagation()
           useEditorStore.getState().selectClip(clip.id)
-
           const startX = event.clientX
           const startY = event.clientY
           const initialStart = clip.start
@@ -116,36 +104,27 @@ export default function TimelineInteractions() {
 
           const move = (ev: PointerEvent) => {
             draftStart = Math.max(0, Number((initialStart + (ev.clientX - startX) / pps).toFixed(2)))
-
             const rows = Array.from(document.querySelectorAll<HTMLElement>('.fx-track-row'))
             const hit = rows.findIndex(row => {
               const rect = row.getBoundingClientRect()
               return ev.clientY >= rect.top && ev.clientY <= rect.bottom
             })
             if (hit >= 0 && Math.abs(ev.clientY - startY) > 8) draftTrack = hit
-
             el.style.left = `${draftStart * pps}px`
             el.style.opacity = '0.86'
           }
-
           const up = () => {
             window.removeEventListener('pointermove', move)
             window.removeEventListener('pointerup', up)
             const state = useEditorStore.getState()
             if (clip.track === 'video' && draftTrack === 3) draftTrack = initialTrack
             if (clip.track === 'audio' && draftTrack !== 3) draftTrack = initialTrack
-            state.updateClip(clip.id, {
-              start: draftStart,
-              duration: initialDuration,
-              trackIndex: draftTrack,
-            })
+            state.updateClip(clip.id, { start: draftStart, duration: initialDuration, trackIndex: draftTrack })
             el.style.opacity = ''
           }
-
           window.addEventListener('pointermove', move)
           window.addEventListener('pointerup', up)
         }
-
         el.addEventListener('pointerdown', onClipDown)
         el.style.cursor = 'grab'
         disposers.push(() => el.removeEventListener('pointerdown', onClipDown))
@@ -155,18 +134,52 @@ export default function TimelineInteractions() {
           const onResizePointerDown = (event: PointerEvent) => {
             const targetClip = getClipFromElement(el)
             if (!targetClip) return
-            const move = () => {
-              // O componente TimelineClip atualiza o width/left localmente durante o gesto.
-              // O commit no pointerup lê esse estado visual para não perder a última alteração.
+            event.preventDefault()
+            event.stopImmediatePropagation()
+            useEditorStore.getState().selectClip(targetClip.id)
+
+            const side = handle.classList.contains('left') ? 'left' : 'right'
+            const startX = event.clientX
+            const initialStart = targetClip.start
+            const initialDuration = targetClip.duration
+            const end = initialStart + initialDuration
+            const pps = getPps()
+            const asset = useEditorStore.getState().project.media.find(a => a.id === targetClip.assetId)
+            const maxDuration = asset?.kind === 'image' ? 60 : Math.max(0.05, asset?.duration ?? initialDuration)
+
+            let draftStart = initialStart
+            let draftDuration = initialDuration
+
+            const paint = () => {
+              handle.parentElement!.style.left = `${draftStart * pps}px`
+              handle.parentElement!.style.width = `${Math.max(18, draftDuration * pps)}px`
             }
+            paint()
+
+            const move = (ev: PointerEvent) => {
+              const delta = (ev.clientX - startX) / pps
+              if (side === 'right') {
+                draftDuration = Math.max(0.05, Math.min(maxDuration, initialDuration + delta))
+              } else {
+                draftStart = Math.max(0, Math.min(end - 0.05, initialStart + delta))
+                draftDuration = end - draftStart
+                draftDuration = Math.min(maxDuration, draftDuration)
+                if (draftDuration >= maxDuration) draftStart = Math.max(0, end - maxDuration)
+              }
+              draftStart = Number(draftStart.toFixed(2))
+              draftDuration = Number(draftDuration.toFixed(2))
+              paint()
+            }
+
             const up = () => {
               window.removeEventListener('pointermove', move)
               window.removeEventListener('pointerup', up)
-              commitVisualClipTiming(el)
+              const state = useEditorStore.getState()
+              state.setClipTiming(targetClip.id, draftStart, draftDuration)
             }
+
             window.addEventListener('pointermove', move)
             window.addEventListener('pointerup', up)
-            event.stopPropagation()
           }
           handle.addEventListener('pointerdown', onResizePointerDown)
           disposers.push(() => handle.removeEventListener('pointerdown', onResizePointerDown))
