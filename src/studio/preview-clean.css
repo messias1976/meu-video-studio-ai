@@ -2,4 +2,48 @@
 .fx-layer.selected{outline:0!important}
 .fx-selection{display:none!important}
 .fx-preview-media{object-fit:contain!important;object-position:center center!important}
-.fx-layer{left:50%!important;top:50%!important}
+
+/* Não sobrescreve posição/tamanho definidos pelo clipe. */
+.fx-layer{position:absolute!important;transform-origin:center center!important}
+
+/* Todas as barras ficam invisíveis até o ponteiro entrar na área. */
+.fx-assets,
+.fx-inspector-panel,
+.fx-rail-scroll,
+.fx-timeline-scroll{
+  scrollbar-width:thin;
+  scrollbar-color:transparent transparent;
+}
+.fx-assets:hover,
+.fx-inspector-panel:hover,
+.fx-rail-scroll:hover,
+.fx-timeline-scroll:hover{
+  scrollbar-color:#3a414d transparent;
+}
+.fx-assets::-webkit-scrollbar,
+.fx-inspector-panel::-webkit-scrollbar,
+.fx-rail-scroll::-webkit-scrollbar,
+.fx-timeline-scroll::-webkit-scrollbar{
+  width:10px;
+  height:10px;
+  background:transparent;
+}
+.fx-assets::-webkit-scrollbar-thumb,
+.fx-inspector-panel::-webkit-scrollbar-thumb,
+.fx-rail-scroll::-webkit-scrollbar-thumb,
+.fx-timeline-scroll::-webkit-scrollbar-thumb{
+  background:transparent;
+  border-radius:8px;
+}
+.fx-assets:hover::-webkit-scrollbar-thumb,
+.fx-inspector-panel:hover::-webkit-scrollbar-thumb,
+.fx-rail-scroll:hover::-webkit-scrollbar-thumb,
+.fx-timeline-scroll:hover::-webkit-scrollbar-thumb{
+  background:#3a414d;
+}
+
+/* A timeline é horizontal. A altura já é fixa pelas trilhas, portanto não cria rolagem vertical. */
+.fx-timeline-scroll{
+  overflow-x:auto!important;
+  overflow-y:hidden!important;
+}
