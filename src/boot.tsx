@@ -2,6 +2,7 @@ import React from 'react'
 import { createRoot } from 'react-dom/client'
 import StudioApp from './studio/StudioAppFixed'
 import ProjectSettings from './studio/ProjectSettings'
+import './studio/preview-clean.css'
 
 class RuntimeErrorBoundary extends React.Component<React.PropsWithChildren, { error: Error | null }> {
   state = { error: null as Error | null }
