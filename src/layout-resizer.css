@@ -1,26 +1,25 @@
-/* Layout UX: visible resize affordances, usable preview area and timeline scrollbars. */
+/* UX layout controls: resizable panels, guaranteed preview space and visible timeline scrollbars. */
 .workspace{position:relative;min-width:0;min-height:0;overflow:hidden}
 .library,.inspector,.editor{min-width:0;min-height:0;overflow:hidden}
-.editor{grid-template-rows:40px minmax(280px,1fr) 54px minmax(220px,300px)!important}
 .preview-zone{min-width:0;min-height:280px;overflow:auto!important;display:grid;place-items:center;padding:24px 28px}
 .preview-shadow{width:min(100%,980px);height:auto;max-width:980px;display:grid;place-items:center}
 .preview-stage{width:min(100%,860px)!important;max-width:860px!important;min-width:280px!important;height:auto!important;aspect-ratio:16/9!important;transform-origin:center!important}
 .timeline-panel{min-width:0;min-height:0;overflow:hidden!important}
 .timeline-scroll{display:block!important;overflow:auto!important;min-width:0;min-height:0;scrollbar-width:auto!important;scrollbar-color:#5a6270 #11151b!important}
-.timeline-scroll::-webkit-scrollbar{width:11px;height:11px}
-.timeline-scroll::-webkit-scrollbar-track{background:#0f1319}
-.timeline-scroll::-webkit-scrollbar-thumb{background:#464f5e;border-radius:8px;border:2px solid #0f1319}
-.timeline-scroll::-webkit-scrollbar-thumb:hover{background:#697386}
-.layout-resize-library,.layout-resize-inspector{position:absolute;top:0;bottom:0;width:8px;z-index:1000;cursor:col-resize;background:transparent;touch-action:none}
+.timeline-scroll::-webkit-scrollbar{width:12px;height:12px}
+.timeline-scroll::-webkit-scrollbar-track{background:#0e1218}
+.timeline-scroll::-webkit-scrollbar-thumb{background:#4b5565;border-radius:8px;border:3px solid #0e1218}
+.timeline-scroll::-webkit-scrollbar-thumb:hover{background:#727d90}
+.layout-resize-library,.layout-resize-inspector{position:absolute;top:0;bottom:0;width:9px;z-index:1000;cursor:col-resize;background:transparent;touch-action:none}
 .layout-resize-library{margin-left:-4px}
 .layout-resize-inspector{margin-right:-4px}
-.layout-resize-library:hover,.layout-resize-inspector:hover,.layout-resize-library:active,.layout-resize-inspector:active{background:rgba(118,87,235,.42)}
-.layout-resize-library::after,.layout-resize-inspector::after{content:"";position:absolute;top:50%;left:2px;width:4px;height:54px;transform:translateY(-50%);border-radius:4px;background:#4a5362;opacity:.75}
-.layout-resize-library:hover::after,.layout-resize-inspector:hover::after{background:#8b73ff;opacity:1}
-.layout-resize-timeline{position:absolute;left:0;right:0;height:9px;z-index:1000;cursor:row-resize;background:transparent;touch-action:none}
-.layout-resize-timeline:hover,.layout-resize-timeline:active{background:rgba(118,87,235,.42)}
-.layout-resize-timeline::after{content:"";position:absolute;left:50%;top:2px;width:96px;height:4px;transform:translateX(-50%);border-radius:3px;background:#4a5362;opacity:.9}
-.layout-resize-timeline:hover::after{background:#8b73ff}
+.layout-resize-library:hover,.layout-resize-inspector:hover,.layout-resize-library:active,.layout-resize-inspector:active{background:rgba(118,87,235,.45)}
+.layout-resize-library::after,.layout-resize-inspector::after{content:"";position:absolute;top:50%;left:2px;width:4px;height:58px;transform:translateY(-50%);border-radius:4px;background:#505a6b;opacity:.9}
+.layout-resize-library:hover::after,.layout-resize-inspector:hover::after{background:#9b82ff}
+.layout-resize-timeline{position:absolute;left:0;right:0;height:10px;z-index:1000;cursor:row-resize;background:transparent;touch-action:none}
+.layout-resize-timeline:hover,.layout-resize-timeline:active{background:rgba(118,87,235,.45)}
+.layout-resize-timeline::after{content:"";position:absolute;left:50%;top:2px;width:110px;height:4px;transform:translateX(-50%);border-radius:3px;background:#505a6b}
+.layout-resize-timeline:hover::after{background:#9b82ff}
 body.layout-resizing,body.layout-resizing *{user-select:none!important}
 body.layout-resizing{cursor:col-resize!important}
 body.layout-resizing .layout-resize-timeline{cursor:row-resize!important}
