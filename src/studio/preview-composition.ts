@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { useEditorStore } from '../editor/store'
 import type { Clip, MediaAsset } from '../editor/types'
 
@@ -7,19 +8,16 @@ function syncVideoPreview() {
   const activeVideos = project.clips
     .filter(c => c.track !== 'audio' && project.playhead >= c.start && project.playhead < c.start + c.duration)
     .sort((a, b) => b.trackIndex - a.trackIndex)
-  const videoElements = Array.from(document.querySelectorAll<HTMLVideoElement>('.fx-layer video'))
-  const used = new Set<string>()
 
-  videoElements.forEach(video => {
-    const source = video.currentSrc || video.src
-    const candidates = activeVideos.filter(clip => {
-      if (used.has(clip.id)) return false
-      const asset = project.media.find(m => m.id === clip.assetId)
-      return asset?.url === source
-    })
-    const clip = candidates[0] ?? activeVideos.find(c => !used.has(c.id))
+  const layers = Array.from(document.querySelectorAll<HTMLElement>('.fx-layer'))
+  const videos = Array.from(document.querySelectorAll<HTMLVideoElement>('.fx-layer video'))
+
+  videos.forEach(video => {
+    const layer = video.closest('.fx-layer') as HTMLElement | null
+    if (!layer) return
+    const index = layers.indexOf(layer)
+    const clip = activeVideos[index]
     if (!clip) return
-    used.add(clip.id)
 
     const localTime = Math.max(0, project.playhead - clip.start)
     try {
@@ -28,9 +26,12 @@ function syncVideoPreview() {
       video.playsInline = true
       if (Math.abs(video.currentTime - localTime) > 0.025) video.currentTime = localTime
       if (project.isPlaying) void video.play().catch(() => undefined)
-      else video.pause()
+      else {
+        video.currentTime = localTime
+        video.pause()
+      }
     } catch {
-      // O elemento pode ser desmontado durante a troca de playhead.
+      // O elemento pode ser desmontado durante a troca da agulha/camada.
     }
   })
 }
@@ -62,10 +63,8 @@ function AudioClip({ clip, asset, playing, playhead }: { clip: Clip; asset: Medi
 
 export default function PreviewComposition() {
   const project = useEditorStore(s => s.project)
-  const activeAudio = project.clips.filter(c =>
-    c.track === 'audio' &&
-    project.playhead >= c.start &&
-    project.playhead < c.start + c.duration,
+  const activeAudio = project.clips.filter(
+    c => c.track === 'audio' && project.playhead >= c.start && project.playhead < c.start + c.duration,
   )
 
   useEffect(() => {
@@ -79,7 +78,7 @@ export default function PreviewComposition() {
     return () => observer.disconnect()
   }, [])
 
-  return (
+  return createPortal(
     <>
       {activeAudio.map(clip => {
         const asset = project.media.find(item => item.id === clip.assetId)
@@ -87,6 +86,7 @@ export default function PreviewComposition() {
           <AudioClip key={clip.id} clip={clip} asset={asset} playing={project.isPlaying} playhead={project.playhead} />
         ) : null
       })}
-    </>
+    </>,
+    document.body,
   )
 }
