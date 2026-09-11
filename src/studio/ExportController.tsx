@@ -84,7 +84,7 @@ async function renderProject(project:{name:string;fps:number;resolution:{width:n
           const px=width*clip.x/100,py=height*clip.y/100,pw=width*clip.width/100,ph=height*clip.height/100
           ctx.save();ctx.globalAlpha=Math.max(0,Math.min(1,clip.opacity));ctx.translate(px,py);ctx.rotate(clip.rotation*Math.PI/180);if(clip.flipX)ctx.scale(-1,1)
           const srcW=(el as HTMLVideoElement).videoWidth||(el as HTMLImageElement).naturalWidth||width;const srcH=(el as HTMLVideoElement).videoHeight||(el as HTMLImageElement).naturalHeight||height
-          const r=getContainRect(srcW,srcH, pw,ph,-pw/2,-ph/2)
+          const r=getContainRect(srcW,srcH,pw,ph,-pw/2,-ph/2,pw,ph)
           if(el instanceof HTMLVideoElement){const target=Math.max(0,timeline-clip.start);try{if(Math.abs(el.currentTime-target)>0.08)el.currentTime=target;if(el.paused)void el.play().catch(()=>undefined);ctx.drawImage(el,r.x,r.y,r.w,r.h)}catch{}}
           else ctx.drawImage(el,r.x,r.y,r.w,r.h)
           ctx.restore()
