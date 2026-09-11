@@ -15,7 +15,8 @@ function seekFromClientX(clientX: number) {
   const inner = document.querySelector<HTMLElement>('.fx-timeline-inner')
   if (!inner) return
   const rect = inner.getBoundingClientRect()
-  useEditorStore.getState().setPlayhead(Math.max(0, Number(((clientX - rect.left) / getPps()).toFixed(2))))
+  const next = Math.max(0, (clientX - rect.left) / getPps())
+  useEditorStore.getState().setPlayhead(Number(next.toFixed(2)))
 }
 
 function getClipFromElement(el: HTMLElement) {
@@ -33,6 +34,7 @@ function getClipFromElement(el: HTMLElement) {
 export default function TimelineInteractions() {
   useEffect(() => {
     let cleanup: (() => void) | undefined
+    let scheduled = false
 
     const bind = () => {
       cleanup?.()
@@ -73,6 +75,7 @@ export default function TimelineInteractions() {
           seekFromClientX(event.clientX)
         }
         playhead.style.cursor = 'ew-resize'
+        playhead.style.zIndex = '20'
         playhead.addEventListener('pointerdown', onPlayheadDown)
         disposers.push(() => playhead.removeEventListener('pointerdown', onPlayheadDown))
       }
@@ -88,16 +91,19 @@ export default function TimelineInteractions() {
           event.preventDefault()
           event.stopPropagation()
           useEditorStore.getState().selectClip(clip.id)
+
           const startX = event.clientX
           const startY = event.clientY
           const initialStart = clip.start
           const initialTrack = clip.trackIndex
+          const initialDuration = clip.duration
           const pps = getPps()
           let draftStart = initialStart
           let draftTrack = initialTrack
 
           const move = (ev: PointerEvent) => {
             draftStart = Math.max(0, Number((initialStart + (ev.clientX - startX) / pps).toFixed(2)))
+
             const rows = Array.from(document.querySelectorAll<HTMLElement>('.fx-track-row'))
             const hit = rows.findIndex(row => {
               const rect = row.getBoundingClientRect()
@@ -105,7 +111,7 @@ export default function TimelineInteractions() {
             })
             if (hit >= 0 && Math.abs(ev.clientY - startY) > 8) draftTrack = hit
 
-            useEditorStore.getState().setClipTiming(clip.id, draftStart, clip.duration)
+            // Mantém a posição visual durante o arraste sem reescrever a duração.
             el.style.left = `${draftStart * pps}px`
             el.style.opacity = '0.86'
           }
@@ -116,7 +122,11 @@ export default function TimelineInteractions() {
             const state = useEditorStore.getState()
             if (clip.track === 'video' && draftTrack === 3) draftTrack = initialTrack
             if (clip.track === 'audio' && draftTrack !== 3) draftTrack = initialTrack
-            state.updateClip(clip.id, { start: draftStart, trackIndex: draftTrack })
+            state.updateClip(clip.id, {
+              start: draftStart,
+              duration: initialDuration,
+              trackIndex: draftTrack,
+            })
             el.style.opacity = ''
           }
 
@@ -132,9 +142,19 @@ export default function TimelineInteractions() {
       cleanup = () => disposers.forEach(dispose => dispose())
     }
 
-    const observer = new MutationObserver(bind)
+    const scheduleBind = () => {
+      if (scheduled) return
+      scheduled = true
+      queueMicrotask(() => {
+        scheduled = false
+        bind()
+      })
+    }
+
+    const observer = new MutationObserver(scheduleBind)
     observer.observe(document.body, { childList: true, subtree: true })
     bind()
+
     return () => {
       cleanup?.()
       observer.disconnect()
