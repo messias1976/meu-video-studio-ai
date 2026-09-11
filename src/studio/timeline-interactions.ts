@@ -31,6 +31,18 @@ function getClipFromElement(el: HTMLElement) {
   return clips[clipIndex] ?? null
 }
 
+function commitVisualClipTiming(el: HTMLElement) {
+  const clip = getClipFromElement(el)
+  if (!clip) return
+  const pps = getPps()
+  const left = Number.parseFloat(el.style.left)
+  const width = Number.parseFloat(el.style.width)
+  if (!Number.isFinite(left) || !Number.isFinite(width) || pps <= 0) return
+  const start = Math.max(0, left / pps)
+  const duration = Math.max(0.05, width / pps)
+  useEditorStore.getState().setClipTiming(clip.id, Number(start.toFixed(2)), Number(duration.toFixed(2)))
+}
+
 export default function TimelineInteractions() {
   useEffect(() => {
     let cleanup: (() => void) | undefined
@@ -76,6 +88,7 @@ export default function TimelineInteractions() {
         }
         playhead.style.cursor = 'ew-resize'
         playhead.style.zIndex = '20'
+        playhead.style.pointerEvents = 'auto'
         playhead.addEventListener('pointerdown', onPlayheadDown)
         disposers.push(() => playhead.removeEventListener('pointerdown', onPlayheadDown))
       }
@@ -111,7 +124,6 @@ export default function TimelineInteractions() {
             })
             if (hit >= 0 && Math.abs(ev.clientY - startY) > 8) draftTrack = hit
 
-            // Mantém a posição visual durante o arraste sem reescrever a duração.
             el.style.left = `${draftStart * pps}px`
             el.style.opacity = '0.86'
           }
@@ -137,6 +149,28 @@ export default function TimelineInteractions() {
         el.addEventListener('pointerdown', onClipDown)
         el.style.cursor = 'grab'
         disposers.push(() => el.removeEventListener('pointerdown', onClipDown))
+
+        const handles = Array.from(el.querySelectorAll<HTMLElement>('.fx-clip-handle'))
+        handles.forEach(handle => {
+          const onResizePointerDown = (event: PointerEvent) => {
+            const targetClip = getClipFromElement(el)
+            if (!targetClip) return
+            const move = () => {
+              // O componente TimelineClip atualiza o width/left localmente durante o gesto.
+              // O commit no pointerup lê esse estado visual para não perder a última alteração.
+            }
+            const up = () => {
+              window.removeEventListener('pointermove', move)
+              window.removeEventListener('pointerup', up)
+              commitVisualClipTiming(el)
+            }
+            window.addEventListener('pointermove', move)
+            window.addEventListener('pointerup', up)
+            event.stopPropagation()
+          }
+          handle.addEventListener('pointerdown', onResizePointerDown)
+          disposers.push(() => handle.removeEventListener('pointerdown', onResizePointerDown))
+        })
       })
 
       cleanup = () => disposers.forEach(dispose => dispose())
