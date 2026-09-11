@@ -18,16 +18,23 @@ function syncPreview() {
 
     const localTime = Math.max(0, project.playhead - clip.start)
     try {
-      if (Number.isFinite(localTime) && Math.abs(video.currentTime - localTime) > 0.04) {
+      // O Preview é um compositor visual: todos os vídeos ativos precisam
+      // permanecer reproduzíveis, inclusive quando estão em camadas inferiores.
+      // O áudio será tratado pelo motor de áudio da timeline.
+      video.muted = true
+      video.playsInline = true
+      if (Number.isFinite(localTime) && Math.abs(video.currentTime - localTime) > 0.10) {
         video.currentTime = localTime
       }
       if (project.isPlaying) {
         void video.play().catch(() => undefined)
       } else {
+        // Ao parar ou arrastar a agulha, o frame fica exatamente no ponto dela.
+        video.currentTime = localTime
         video.pause()
       }
     } catch {
-      // O elemento pode estar sendo desmontado durante uma troca de playhead/camada.
+      // O elemento pode estar sendo desmontado durante a troca de playhead/camada.
     }
   })
 }
