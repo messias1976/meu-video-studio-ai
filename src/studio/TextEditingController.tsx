@@ -1,6 +1,8 @@
 import { useEffect } from 'react'
 import { useEditorStore } from '../editor/store'
 
+const textLike=(clip:{name:string;text?:string})=>clip.name==='Título'||clip.name==='Subtítulo'||!!clip.text||clip.name.toLowerCase().startsWith('texto')
+
 export default function TextEditingController(){
   const project=useEditorStore(s=>s.project)
   const selected=useEditorStore(s=>s.selectedClipId)
@@ -12,16 +14,17 @@ export default function TextEditingController(){
       layers.forEach((layer,index)=>{
         const clip=active[index]
         const text=layer.querySelector<HTMLElement>('.fx-text-preview')
-        if(!clip||!text||clip.id!==selected)return
-        if(document.activeElement!==text && text.textContent!==clip.name) text.textContent=clip.name
+        if(!clip||!text||clip.id!==selected||!textLike(clip))return
+        const value=clip.text??clip.name
+        if(document.activeElement!==text && text.textContent!==value)text.textContent=value
         text.contentEditable='true'
         text.spellcheck=false
         text.dataset.clipId=clip.id
         text.style.cursor='text'
-        text.onpointerdown=e=>e.stopPropagation()
+        text.onpointerdown=e=>{e.stopPropagation()}
         text.onkeydown=e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();text.blur()}}
-        text.onblur=()=>{const value=(text.textContent??'').trim();if(value)update(clip.id,{name:value})}
-        text.ondblclick=()=>{text.focus();const range=document.createRange();range.selectNodeContents(text);const sel=window.getSelection();sel?.removeAllRanges();sel?.addRange(range)}
+        text.onblur=()=>{const next=(text.textContent??'').trim();if(next)update(clip.id,{text:next,name:next})}
+        text.ondblclick=e=>{e.stopPropagation();text.focus();const range=document.createRange();range.selectNodeContents(text);const selection=window.getSelection();selection?.removeAllRanges();selection?.addRange(range)}
       })
     }
     const id=window.setTimeout(run,0)
