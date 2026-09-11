@@ -2,8 +2,8 @@
 .fx-layer.selected{outline:0!important}
 .fx-selection{display:none!important}
 .fx-preview-media{object-fit:contain!important;object-position:center center!important}
-
 .fx-layer{position:absolute!important;transform-origin:center center!important}
+.fx-text-preview{user-select:text!important;pointer-events:auto!important;white-space:pre-wrap!important;overflow-wrap:anywhere!important}
 
 .fx-assets,
 .fx-inspector-panel,
@@ -40,7 +40,10 @@
   background:#3a414d;
 }
 
-.fx-timeline-scroll{overflow-x:auto!important;overflow-y:hidden!important}
+.fx-timeline-scroll{overflow-x:auto!important;overflow-y:auto!important}
+.fx-timeline-body{min-height:0;overflow:hidden}
+.fx-timeline-scroll{max-height:calc(100% - 46px)}
+
 .fx-export-render-modal{width:min(560px,calc(100vw - 40px))}
 .fx-export-render-modal .fx-field>select{width:100%;min-height:40px;padding:0 12px;border:1px solid #303744;border-radius:8px;background:#11151d;color:#fff;outline:none}
 .fx-export-render-modal .fx-field>select:focus{border-color:#6756e8}
