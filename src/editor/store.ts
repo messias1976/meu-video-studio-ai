@@ -59,7 +59,20 @@ function snapshot(): Snapshot { return { project: structuredClone(current) } }
 export const useEditorStore = create<EditorState>((set) => ({
   project: current, selectedClipId: null, history: [], future: [], canUndo: false, canRedo: false,
   importMedia: async (file, kind) => { const asset: MediaAsset = { id: crypto.randomUUID(), name: file.name, kind, url: URL.createObjectURL(file), size: file.size, duration: await durationOf(file) }; const p = { ...current, media: [...current.media, asset], updatedAt: new Date().toISOString() }; persist(p); set({ project: p }); return asset },
-  addClip: assetId => { const a = current.media.find(m => m.id === assetId); if (!a) return; const isAudio = a.kind === 'audio'; const same = current.clips.filter(c => c.track === (isAudio ? 'audio' : 'video')); const start = same.length ? Math.max(...same.map(c => c.start + c.duration)) + 0.2 : 0; const initialDuration = a.kind === 'image' ? 6 : Math.max(.05, a.duration); const c: Clip = { id: crypto.randomUUID(), assetId, name: a.name, track: isAudio ? 'audio' : 'video', trackIndex: isAudio ? 3 : same.length % 3, start, duration: initialDuration, x: 50, y: 50, width: 100, height: 100, rotation: 0, opacity: 1, flipX: false, muted: !isAudio, volume: 1 }; const p = { ...current, clips: [...current.clips, c], updatedAt: new Date().toISOString() }; persist(p); set({ project: p, selectedClipId: c.id }) },
+  addClip: assetId => {
+    const base = useEditorStore.getState().project
+    const a = base.media.find(m => m.id === assetId)
+    if (!a) return
+    const isAudio = a.kind === 'audio'
+    const same = base.clips.filter(c => c.track === (isAudio ? 'audio' : 'video'))
+    const start = same.length ? Math.max(...same.map(c => c.start + c.duration)) + 0.2 : 0
+    const initialDuration = a.kind === 'image' ? 6 : Math.max(.05, a.duration)
+    const isTextAsset = a.kind === 'image' && !a.url
+    const c: Clip = { id: crypto.randomUUID(), assetId, name: a.name, track: isAudio ? 'audio' : 'video', trackIndex: isAudio ? 3 : isTextAsset ? 2 : same.length % 2, start, duration: initialDuration, x: 50, y: 50, width: 100, height: 100, rotation: 0, opacity: 1, flipX: false, muted: !isAudio, volume: 1 }
+    const p = { ...base, clips: [...base.clips, c], updatedAt: new Date().toISOString() }
+    persist(p)
+    set({ project: p, selectedClipId: c.id })
+  },
   updateClip: (id, patch) => set(s => { const before = snapshot(); const p = { ...current, clips: current.clips.map(c => c.id === id ? { ...c, ...patch, start: Math.max(0, Number(patch.start ?? c.start)), duration: Math.max(.05, Number(patch.duration ?? c.duration)), width: Math.max(1, Math.min(200, Number(patch.width ?? c.width))), height: Math.max(1, Math.min(200, Number(patch.height ?? c.height))) } : c), updatedAt: new Date().toISOString() }; persist(p); return { ...s, project: p, history: [...s.history, before], future: [], canUndo: true, canRedo: false } }),
   setClipTiming: (id, start, duration) => set(s => { const clip = current.clips.find(c => c.id === id); if (!clip) return s; const asset = current.media.find(m => m.id === clip.assetId); const maxDuration = asset?.kind === 'image' ? 60 : Math.max(.05, asset?.duration ?? duration); const safeStart = Math.max(0, Number(start) || 0); const safeDuration = Math.max(.05, Math.min(maxDuration, Number(duration) || .05)); const before = snapshot(); const p = { ...current, clips: current.clips.map(c => c.id === id ? { ...c, start: safeStart, duration: safeDuration } : c), updatedAt: new Date().toISOString() }; persist(p); return { ...s, project: p, history: [...s.history, before], future: [], canUndo: true, canRedo: false } }),
   selectClip: id => set({ selectedClipId: id }),
@@ -71,5 +84,12 @@ export const useEditorStore = create<EditorState>((set) => ({
   undo: () => set(s => { const prev = s.history.at(-1); if (!prev) return s; const future = [{ project: structuredClone(current) }, ...s.future]; const history = s.history.slice(0, -1); persist(prev.project); return { ...s, project: prev.project, history, future, canUndo: history.length > 0, canRedo: true } }),
   redo: () => set(s => { const next = s.future[0]; if (!next) return s; const history = [...s.history, { project: structuredClone(current) }]; const future = s.future.slice(1); persist(next.project); return { ...s, project: next.project, history, future, canUndo: true, canRedo: future.length > 0 } }),
   setPlaying: v => set(s => ({ project: { ...s.project, isPlaying: v } })),
-  setPlayhead: v => set(s => ({ project: { ...s.project, playhead: Math.max(0, v) } })),
+  setPlayhead: v => set(s => {
+    const end = s.project.clips.reduce((max, clip) => Math.max(max, clip.start + clip.duration), 0)
+    const safe = Math.max(0, Number(v) || 0)
+    const clamped = end > 0 ? Math.min(safe, end) : safe
+    const reachedEnd = end > 0 && safe >= end
+    const next = { ...s.project, playhead: clamped, isPlaying: reachedEnd ? false : s.project.isPlaying }
+    return { ...s, project: next }
+  }),
 }))
