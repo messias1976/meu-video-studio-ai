@@ -1,13 +1,7 @@
 import React from 'react'
 import { createRoot } from 'react-dom/client'
-import StudioApp from './studio/StudioAppFinal'
+import StudioApp from './studio/StudioAppFixed'
 import ProjectSettings from './studio/ProjectSettings'
-import './studio/final-overrides.css'
-import './studio/window-fit.css'
-import './studio/media-delete-visible.css'
-import './studio/media-actions'
-import './studio/media-preview-fix.css'
-import './studio/preview-resize'
 
 class RuntimeErrorBoundary extends React.Component<React.PropsWithChildren, { error: Error | null }> {
   state = { error: null as Error | null }
